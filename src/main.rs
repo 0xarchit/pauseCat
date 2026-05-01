@@ -2,19 +2,17 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
 use pausecat::settings::Settings;
-use pausecat::timer;
+use pausecat::tray::TrayIcon;
+use pausecat::events::AppEvent;
 
 fn main() {
     println!("PauseCat starting...");
 
     let settings = Arc::new(RwLock::new(Settings::load()));
-    let paused = Arc::new(AtomicBool::new(false));
-    let (tx, _rx) = mpsc::channel();
+    let _paused = Arc::new(AtomicBool::new(false));
+    let (tx, _rx) = mpsc::channel::<AppEvent>();
 
-    // In a real scenario, this would be spawned in a thread
-    // let timer_thread = thread::spawn(move || {
-    //     timer::run(settings, tx, paused);
-    // });
+    let _tray = TrayIcon::new(tx).expect("Failed to create tray icon");
 
-    println!("Timer engine scaffolded.");
+    println!("System tray initialized.");
 }
