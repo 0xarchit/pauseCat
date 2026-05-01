@@ -1,0 +1,35 @@
+[package]
+name = "pausecat"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+windows = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Power",
+    "Win32_System_Registry",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_Graphics_Dwm",
+] }
+webview2-com = "0.19"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+image = "0.24"
+winreg = "0.51"
+log = "0.4"
+env_logger = "0.10"
+thiserror = "1.0"
+
+[build-dependencies]
+winres = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
