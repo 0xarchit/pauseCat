@@ -19,6 +19,7 @@ pub fn run_optimized(
 ) {
     let mut last_tick = Instant::now();
     let mut work_remaining;
+    let mut pre_capture_triggered = false;
     
     {
         let s = settings.read().unwrap();
@@ -39,8 +40,10 @@ pub fn run_optimized(
         if work_remaining > elapsed {
             work_remaining -= elapsed;
             
-            // Optimization: Pre-capture 5 seconds before break starts
-            if work_remaining.as_secs() == 5 {
+            // Optimization: Pre-capture background a few seconds before break starts
+            // Use a range check and flag to ensure it triggers exactly once per cycle
+            if work_remaining.as_secs() <= 5 && !pre_capture_triggered {
+                pre_capture_triggered = true;
                 let bg_clone = pre_captured_bg.clone();
                 thread::spawn(move || {
                     if let Ok(captured) = capture::capture_virtual_screen() {
@@ -64,10 +67,12 @@ pub fn run_optimized(
             
             let _ = event_tx.send(AppEvent::HideOverlay);
             
+            // Reset for next work cycle
             {
                 let s = settings.read().unwrap();
                 work_remaining = Duration::from_secs(s.work_duration_secs as u64);
             }
+            pre_capture_triggered = false;
             last_tick = Instant::now();
         }
     }

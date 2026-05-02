@@ -26,8 +26,7 @@ pub fn get_assets_path() -> PathBuf {
 
 pub fn init_global_env() -> Result<()> {
     unsafe {
-        let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-
+        // Note: CoInitializeEx should be called on the main thread before this.
         let mut config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
         config_dir.push("PauseCat");
         let mut webview_data = config_dir.clone();
@@ -36,25 +35,20 @@ pub fn init_global_env() -> Result<()> {
         
         let data_path_h = HSTRING::from(webview_data.to_str().unwrap_or_default());
 
-        let (tx, rx) = std::sync::mpsc::channel();
-
+        // Optimization: Non-blocking async initialization. 
+        // The callback will set the global environment whenever it's ready.
         CreateCoreWebView2EnvironmentWithOptions(None, PCWSTR(data_path_h.as_ptr()), None, 
             &CreateCoreWebView2EnvironmentCompletedHandler::create(
                 Box::new(move |_result, env| {
-                    let env_res = match env {
-                        Some(e) => Ok(e),
-                        None => Err(windows::core::Error::from_hresult(HRESULT(0x80004005u32 as i32))), // E_FAIL
-                    };
-                    let _ = tx.send(env_res);
+                    if let Some(e) = env {
+                        if let Ok(mut lock) = GLOBAL_ENV.lock() {
+                            *lock = Some(SendSafeEnv(e));
+                        }
+                    }
                     Ok(())
                 })
             )
         )?;
-
-        if let Ok(Ok(env)) = rx.recv() {
-            let mut lock = GLOBAL_ENV.lock().unwrap();
-            *lock = Some(SendSafeEnv(env));
-        }
         
         Ok(())
     }
