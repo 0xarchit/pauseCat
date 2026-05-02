@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::thread;
 use windows::Win32::UI::WindowsAndMessaging::*;
+use windows::Win32::UI::Input::KeyboardAndMouse::*;
 use windows::Win32::System::Com::*;
 use windows::Win32::Foundation::*;
 use pausecat::settings::Settings;
@@ -68,10 +69,14 @@ impl App {
         match event {
             AppEvent::ShowOverlay => {
                 if self.reminder_overlay.is_none() {
+                    self.toggle_media(); // Pause media
                     self.show_overlay();
                 }
             }
             AppEvent::HideOverlay | AppEvent::UserDismissed => {
+                if self.reminder_overlay.is_some() {
+                    self.toggle_media(); // Resume media
+                }
                 self.reminder_overlay = None;
                 self.settings_window = None;
             }
@@ -112,6 +117,40 @@ impl App {
                 overlay.fade_in();
                 self.reminder_overlay = Some(overlay);
             }
+        }
+    }
+
+    fn toggle_media(&self) {
+        // Broadacst Play/Pause key to the whole system.
+        // This is highly compatible with browsers (YouTube), Spotify, and players.
+        unsafe {
+            let inputs = [
+                INPUT {
+                    r#type: INPUT_KEYBOARD,
+                    Anonymous: INPUT_0 {
+                        ki: KEYBDINPUT {
+                            wVk: VK_MEDIA_PLAY_PAUSE,
+                            wScan: 0,
+                            dwFlags: KEYBD_EVENT_FLAGS(0),
+                            time: 0,
+                            dwExtraInfo: 0,
+                        },
+                    },
+                },
+                INPUT {
+                    r#type: INPUT_KEYBOARD,
+                    Anonymous: INPUT_0 {
+                        ki: KEYBDINPUT {
+                            wVk: VK_MEDIA_PLAY_PAUSE,
+                            wScan: 0,
+                            dwFlags: KEYEVENTF_KEYUP,
+                            time: 0,
+                            dwExtraInfo: 0,
+                        },
+                    },
+                },
+            ];
+            let _ = SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
         }
     }
 

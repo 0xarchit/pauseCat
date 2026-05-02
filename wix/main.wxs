@@ -1,44 +1,59 @@
-<?xml version='1.0' encoding='windows-1252'?>
-<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-    <Product Id='*' Name='PauseCat' UpgradeCode='570a2736-2391-4c12-8e3d-74d32098d57d'
-        Language='1033' Codepage='1252' Version='0.1.0' Manufacturer='0xarchit'>
-        <Package Id='*' Keywords='Installer' Description='PauseCat Break Reminder'
-            Comments='Lightweight break reminder for Windows' Manufacturer='0xarchit'
-            InstallerVersion='200' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="PauseCat" 
+           Manufacturer="0xarchit" 
+           Version="1.0.0" 
+           UpgradeCode="570a2736-2391-4c12-8e3d-74d32098d57d" 
+           Language="1033">
+    
+    <SummaryInformation Keywords="Installer" Description="PauseCat Break Reminder" />
 
-        <MajorUpgrade DowngradeErrorMessage='A newer version of [ProductName] is already installed.' />
-        <Media Id='1' Cabinet='pausecat.cab' EmbedCab='yes' />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    
+    <Media Id="1" Cabinet="pausecat.cab" EmbedCab="yes" />
 
-        <Directory Id='TARGETDIR' Name='SourceDir'>
-            <Directory Id='ProgramFilesFolder'>
-                <Directory Id='INSTALLDIR' Name='PauseCat'>
-                    <Component Id='MainExecutable' Guid='a3b1c6d8-e4f2-4b34-8c7a-9d2e1b0c3d4f'>
-                        <File Id='PauseCatEXE' Source='target\release\pausecat.exe' KeyPath='yes' Checksum='yes'>
-                            <Shortcut Id='StartMenuShortcut' Directory='ProgramMenuDir' Name='PauseCat'
-                                WorkingDirectory='INSTALLDIR' Icon='pauseCat.ico' IconIndex='0' Advertise='yes' />
-                            <Shortcut Id='DesktopShortcut' Directory='DesktopFolder' Name='PauseCat'
-                                WorkingDirectory='INSTALLDIR' Icon='pauseCat.ico' IconIndex='0' Advertise='yes' />
-                        </File>
-                    </Component>
-                </Directory>
-            </Directory>
-            <Directory Id='ProgramMenuFolder' Name='Programs'>
-                <Directory Id='ProgramMenuDir' Name='PauseCat'>
-                    <Component Id='ProgramMenuShortcutComponent' Guid='b4c2d7e9-f5a3-4c45-9d8b-ae3f2c1d4e5g'>
-                        <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
-                        <RegistryValue Root='HKCU' Key='Software\0xarchit\PauseCat' Name='installed' Type='integer' Value='1' KeyPath='yes' />
-                    </Component>
-                </Directory>
-            </Directory>
-            <Directory Id='DesktopFolder' Name='Desktop' />
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="PauseCat">
+        <Component Id="MainExecutable" Guid="a3b1c6d8-e4f2-4b34-8c7a-9d2e1b0c3d4f">
+          <File Id="PauseCatEXE" Source="target\release\pausecat.exe" KeyPath="yes">
+            <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuDir" Name="PauseCat"
+                      WorkingDirectory="INSTALLFOLDER" Icon="pauseCat.ico" Advertise="yes" />
+            <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="PauseCat"
+                      WorkingDirectory="INSTALLFOLDER" Icon="pauseCat.ico" Advertise="yes" />
+          </File>
+        </Component>
+
+        <Directory Id="AssetsFolder" Name="assets">
+          <Component Id="AssetFiles" Guid="c5d3e8a9-0b12-4d56-9f7c-1e2f3a4b5c6d">
+            <File Id="AssetManifest" Source="assets\app.manifest" />
+            <File Id="AssetOverlay" Source="assets\overlay.html" />
+            <File Id="AssetSettings" Source="assets\settings.html" />
+            <File Id="AssetDefaultVideo" Source="assets\default.webm" />
+            <File Id="AssetIcon" Source="assets\pauseCat.ico" />
+          </Component>
         </Directory>
+      </Directory>
+    </StandardDirectory>
 
-        <Feature Id='MainFeature' Title='PauseCat' Level='1'>
-            <ComponentRef Id='MainExecutable' />
-            <ComponentRef Id='ProgramMenuShortcutComponent' />
-        </Feature>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuDir" Name="PauseCat" />
+    </StandardDirectory>
 
-        <Icon Id='pauseCat.ico' SourceFile='assets\pauseCat.ico' />
-        <Property Id='ARPPRODUCTICON' Value='pauseCat.ico' />
-    </Product>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="MainFeature" Title="PauseCat" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="AssetFiles" />
+      <Component Id="CleanupMain" Directory="ProgramMenuDir" Guid="b4c2d7e9-f5a3-4c45-9d8b-ae3f2c1d4e5f">
+        <RemoveFolder Id="ProgramMenuDir" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\0xarchit\PauseCat" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </Feature>
+
+    <!-- Professional SaaS UI -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Installation complete. Please check your system tray (bottom right) for the PauseCat icon to manage your breaks." />
+
+    <Icon Id="pauseCat.ico" SourceFile="assets\pauseCat.ico" />
+    <Property Id="ARPPRODUCTICON" Value="pauseCat.ico" />
+  </Package>
 </Wix>

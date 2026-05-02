@@ -1,6 +1,6 @@
 [package]
 name = "pausecat"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
@@ -19,6 +19,9 @@ windows = { version = "0.62", features = [
     "Win32_UI_Controls_Dialogs",
     "Win32_System_Threading",
     "Win32_Security",
+    "Win32_System_Variant",
+    "Win32_System_Memory",
+    "Win32_System_Com_StructuredStorage",
 ] }
 webview2-com = "0.39"
 serde = { version = "1.0", features = ["derive"] }
@@ -29,6 +32,8 @@ dirs = "5.0"
 log = "0.4"
 env_logger = "0.10"
 thiserror = "1.0"
+lazy_static = "1.4"
+base64 = "0.21"
 
 [build-dependencies]
 winres = "0.1"
