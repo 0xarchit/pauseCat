@@ -7,7 +7,6 @@ PauseCat is a high-performance, lightweight Windows background application desig
 [![Status](https://img.shields.io/badge/Status-Active%20Development-000000.svg?style=for-the-badge&logo=rocket&logoColor=white&labelColor=000000&color=000000)](https://github.com/0xarchit/pauseCat/pulse)
 [![License](https://img.shields.io/badge/License-Apache%202.0-000000.svg?style=for-the-badge&logo=apache&logoColor=white&labelColor=000000&color=000000)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.75+-000000.svg?style=for-the-badge&logo=rust&logoColor=white&labelColor=000000&color=000000)](https://rust-lang.org)
-[![Security: CodeQL](https://img.shields.io/badge/Security-CodeQL--Audit-000000.svg?style=for-the-badge&logo=github&logoColor=white&labelColor=000000&color=000000)](https://github.com/0xarchit/pauseCat/actions/workflows/codeql.yml)
 
 ---
 
