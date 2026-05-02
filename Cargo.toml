@@ -15,6 +15,8 @@ windows = { version = "0.62", features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_Graphics_Dwm",
     "Win32_System_Com",
+    "Win32_UI_Controls",
+    "Win32_UI_Controls_Dialogs",
 ] }
 webview2-com = "0.39"
 serde = { version = "1.0", features = ["derive"] }
@@ -30,8 +32,8 @@ thiserror = "1.0"
 winres = "0.1"
 
 [profile.release]
-opt-level = 3
+opt-level = "z"
 lto = "fat"
 codegen-units = 1
-strip = "symbols"
 panic = "abort"
+strip = true
