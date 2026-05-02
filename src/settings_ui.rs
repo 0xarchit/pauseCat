@@ -59,6 +59,10 @@ impl SettingsWindow {
             SetPropW(hwnd, w!("Sender"), Some(HANDLE(Box::into_raw(Box::new(sender)) as *mut _)))?;
             SetPropW(hwnd, w!("Settings"), Some(HANDLE(Box::into_raw(Box::new(current_settings)) as *mut _)))?;
 
+            // Apply immersive dark mode immediately after creation
+            let is_dark = crate::system::is_dark_mode();
+            crate::system::apply_immersive_dark_mode(hwnd, is_dark);
+
             Self::init_webview(hwnd)?;
 
             let _ = ShowWindow(hwnd, SW_SHOW);
@@ -188,12 +192,15 @@ impl SettingsWindow {
                         let hhtml = HSTRING::from(html);
                         let _ = webview.NavigateToString(PCWSTR(hhtml.as_ptr()));
 
-                        let settings_handle = GetPropW(hwnd, w!("Settings"));
-                        let settings = &*(settings_handle.0 as *const Settings);
-                        let json_settings = serde_json::to_string(settings).unwrap_or_default();
-                        let load_msg = format!("{{\"action\":\"load\", \"settings\": {}}}", json_settings);
-                        let hload = HSTRING::from(load_msg);
-                        let _ = webview.PostWebMessageAsJson(PCWSTR(hload.as_ptr()));
+                                    let settings_handle = GetPropW(hwnd, w!("Settings"));
+                                    let settings = &*(settings_handle.0 as *const Settings);
+                                    let json_settings = serde_json::to_string(settings).unwrap_or_default();
+                                    
+                                    // Detect theme on startup
+                                    let is_dark = crate::system::is_dark_mode();
+                                    let load_msg = format!("{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}}}", json_settings, is_dark);
+                                    let hload = HSTRING::from(load_msg);
+                                    let _ = webview.PostWebMessageAsJson(PCWSTR(hload.as_ptr()));
 
                         Ok(())
                     })
@@ -201,6 +208,18 @@ impl SettingsWindow {
             )?;
         }
         Ok(())
+    }
+
+    pub fn update_theme(&self, is_dark: bool) {
+        if let Ok(lock) = CONTROLLERS.lock() {
+            if let Some(safe_controller) = lock.get(&(self.hwnd.0 as isize)) {
+                if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {
+                    let msg = format!("{{\"action\":\"theme_changed\", \"isDark\": {}}}", is_dark);
+                    let hmsg = HSTRING::from(msg);
+                    let _ = unsafe { webview.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr())) };
+                }
+            }
+        }
     }
 }
 

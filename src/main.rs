@@ -24,6 +24,7 @@ struct App {
     reminder_overlay: Option<OverlayWindow>,
     settings_window: Option<SettingsWindow>,
     was_media_playing: bool,
+    is_dark_mode: bool,
     pre_captured_bg: Arc<RwLock<Option<(i32, i32, Vec<u8>)>>>,
 }
 
@@ -32,6 +33,8 @@ impl App {
         let (event_tx, event_rx) = mpsc::channel::<AppEvent>();
         let settings = Arc::new(RwLock::new(Settings::load()));
         let paused = Arc::new(AtomicBool::new(false));
+        // Initialization Fix: Correctly detect system theme on startup
+        let is_dark_mode = pausecat::system::is_dark_mode();
 
         Self {
             settings,
@@ -42,6 +45,7 @@ impl App {
             reminder_overlay: None,
             settings_window: None,
             was_media_playing: false,
+            is_dark_mode,
             pre_captured_bg: Arc::new(RwLock::new(None)),
         }
     }
@@ -53,6 +57,7 @@ impl App {
 
         let _ = webview_env::init_global_env();
         let _ = self.settings.read().unwrap().update_autostart();
+        pausecat::system::set_tray_menu_theme(self.is_dark_mode);
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
 
         let settings_clone = self.settings.clone();
@@ -93,6 +98,9 @@ impl App {
                 if self.settings_window.is_none() {
                     let current_settings = self.settings.read().unwrap().clone();
                     if let Ok(win) = SettingsWindow::new(self.event_tx.clone(), current_settings) {
+                        // Apply current theme immediately to title bar and content
+                        win.update_theme(self.is_dark_mode);
+                        pausecat::system::apply_immersive_dark_mode(win.hwnd, self.is_dark_mode);
                         self.settings_window = Some(win);
                     }
                 }
@@ -101,6 +109,21 @@ impl App {
                 let mut settings = self.settings.write().unwrap();
                 *settings = new_settings;
                 let _ = settings.save();
+            }
+            AppEvent::ThemeChanged(is_dark) => {
+                self.is_dark_mode = is_dark;
+                pausecat::system::set_tray_menu_theme(is_dark);
+                
+                // Broadcast to Settings
+                if let Some(ref mut win) = self.settings_window {
+                    win.update_theme(is_dark);
+                    pausecat::system::apply_immersive_dark_mode(win.hwnd, is_dark);
+                }
+                // Broadcast to Overlay
+                if let Some(ref mut win) = self.reminder_overlay {
+                    win.update_theme(is_dark);
+                    pausecat::system::apply_immersive_dark_mode(win.hwnd, is_dark);
+                }
             }
             AppEvent::Quit => {
                 unsafe { PostQuitMessage(0) };
@@ -120,6 +143,8 @@ impl App {
 
         let current_settings = self.settings.read().unwrap().clone();
         if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), width, height, data, current_settings) {
+            overlay.update_theme(self.is_dark_mode);
+            pausecat::system::apply_immersive_dark_mode(overlay.hwnd, self.is_dark_mode);
             overlay.fade_in();
             self.reminder_overlay = Some(overlay);
         }
@@ -129,8 +154,6 @@ impl App {
     }
 
     fn pause_media(&mut self) {
-        // Use the explicit Win32 broadcast for maximum reliability.
-        // APPCOMMAND_MEDIA_PAUSE (47)
         unsafe {
             let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(47 << 16)));
         }
@@ -139,7 +162,6 @@ impl App {
 
     fn resume_media(&mut self) {
         if self.was_media_playing {
-            // APPCOMMAND_MEDIA_PLAY (46)
             unsafe {
                 let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(46 << 16)));
             }

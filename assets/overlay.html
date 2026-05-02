@@ -12,18 +12,24 @@
             --text-color: #ffffff;
         }
 
+        body.dark {
+            --glass-bg: rgba(0, 0, 0, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
         body {
             margin: 0;
-            padding: 60px; /* Padding for top-left position */
+            padding: 60px;
             overflow: hidden;
             background: transparent;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             color: var(--text-color);
             display: flex;
-            justify-content: flex-start; /* Move to left */
-            align-items: flex-start;    /* Move to top */
+            justify-content: flex-start;
+            align-items: flex-start;
             height: 100vh;
             box-sizing: border-box;
+            transition: color 0.3s;
         }
 
         #bg-media-container {
@@ -34,7 +40,7 @@
             height: 100vh;
             z-index: -1;
             overflow: hidden;
-            background: black; /* Prevent flash */
+            background: black;
         }
 
         #bg-image, #bg-video {
@@ -61,6 +67,7 @@
             text-align: center;
             animation: bubbleFloat 8s ease-in-out infinite, fadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
+            transition: background 0.3s, border-color 0.3s;
         }
 
         .timer-display {
@@ -159,6 +166,12 @@
                     document.getElementById('skip-btn').classList.add('hidden');
                     document.getElementById('status').innerText = "Focus on resting";
                 }
+
+                if (event.data.isDark) {
+                    document.body.classList.add('dark');
+                } else {
+                    document.body.classList.remove('dark');
+                }
                 
                 if (event.data.mediaPath) {
                     const img = document.getElementById('bg-image');
@@ -175,10 +188,15 @@
                     }
                 }
                 updateTimer();
+            } else if (event.data.action === "theme_changed") {
+                if (event.data.isDark) {
+                    document.body.classList.add('dark');
+                } else {
+                    document.body.classList.remove('dark');
+                }
             }
         });
 
-        // Inform Rust that we are ready to receive the init data
         window.onload = () => {
             window.chrome.webview.postMessage({ action: "ready" });
         };
