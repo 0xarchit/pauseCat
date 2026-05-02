@@ -1,6 +1,7 @@
 use std::sync::mpsc::Sender;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::path::PathBuf;
 use windows::core::*;
 use windows::Win32::Foundation::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
@@ -15,7 +16,6 @@ use crate::events::AppEvent;
 use crate::settings::Settings;
 use base64::{Engine as _, engine::general_purpose};
 use crate::overlay::webview_env;
-use std::path::PathBuf;
 
 struct ComSafe<T>(T);
 unsafe impl<T> Send for ComSafe<T> {}
@@ -59,7 +59,6 @@ impl SettingsWindow {
             SetPropW(hwnd, w!("Sender"), Some(HANDLE(Box::into_raw(Box::new(sender)) as *mut _)))?;
             SetPropW(hwnd, w!("Settings"), Some(HANDLE(Box::into_raw(Box::new(current_settings)) as *mut _)))?;
 
-            // Apply immersive dark mode immediately after creation
             let is_dark = crate::system::is_dark_mode();
             crate::system::apply_immersive_dark_mode(hwnd, is_dark);
 
@@ -92,9 +91,33 @@ impl SettingsWindow {
 
                         let webview = controller.CoreWebView2()?;
                         let webview_settings = webview.Settings()?;
+                        
+                        // Professional Native Hardening
                         let _ = webview_settings.SetIsWebMessageEnabled(true);
                         let _ = webview_settings.SetAreDefaultContextMenusEnabled(false);
                         let _ = webview_settings.SetAreDevToolsEnabled(false);
+                        let _ = webview_settings.SetIsZoomControlEnabled(false);
+                        let _ = webview_settings.SetIsStatusBarEnabled(false);
+
+                        // Hardened Anti-Zoom Script (Catches touchpads/pinch/Ctrl+Keys)
+                        let _ = webview.AddScriptToExecuteOnDocumentCreated(w!("
+                            window.addEventListener('wheel', function(e) {
+                                if (e.ctrlKey) {
+                                    e.preventDefault();
+                                }
+                            }, { passive: false });
+                            window.addEventListener('keydown', function(e) {
+                                if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '0' || e.key === '=')) {
+                                    e.preventDefault();
+                                }
+                            });
+                            document.addEventListener('touchstart', function(e) {
+                                if (e.touches.length > 1) e.preventDefault();
+                            }, { passive: false });
+                            document.addEventListener('gesturestart', function(e) {
+                                e.preventDefault();
+                            });
+                        "), None);
 
                         let assets_path = webview_env::get_assets_path();
                         let env_resource = env_inner.clone();
@@ -198,15 +221,14 @@ impl SettingsWindow {
                         let hhtml = HSTRING::from(html);
                         let _ = webview.NavigateToString(PCWSTR(hhtml.as_ptr()));
 
-                                    let settings_handle = GetPropW(hwnd, w!("Settings"));
-                                    let settings = &*(settings_handle.0 as *const Settings);
-                                    let json_settings = serde_json::to_string(settings).unwrap_or_default();
-                                    
-                                    // Detect theme on startup
-                                    let is_dark = crate::system::is_dark_mode();
-                                    let load_msg = format!("{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}}}", json_settings, is_dark);
-                                    let hload = HSTRING::from(load_msg);
-                                    let _ = webview.PostWebMessageAsJson(PCWSTR(hload.as_ptr()));
+                        let settings_handle = GetPropW(hwnd, w!("Settings"));
+                        let settings = &*(settings_handle.0 as *const Settings);
+                        let json_settings = serde_json::to_string(settings).unwrap_or_default();
+                        
+                        let is_dark = crate::system::is_dark_mode();
+                        let load_msg = format!("{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}}}", json_settings, is_dark);
+                        let hload = HSTRING::from(load_msg);
+                        let _ = webview.PostWebMessageAsJson(PCWSTR(hload.as_ptr()));
 
                         Ok(())
                     })

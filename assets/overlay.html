@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PauseCat Break</title>
-    <style>
+    <style id="base-styles">
         :root {
             --bubble-size: 580px;
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
             --text-color: #ffffff;
+            --pos-x: 5%;
+            --pos-y: 5%;
         }
 
         body.dark {
@@ -19,17 +21,16 @@
 
         body {
             margin: 0;
-            padding: 60px;
+            padding: 0;
             overflow: hidden;
             background: transparent;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             color: var(--text-color);
-            display: flex;
-            justify-content: flex-start;
-            align-items: flex-start;
             height: 100vh;
+            width: 100vw;
             box-sizing: border-box;
             transition: color 0.3s;
+            position: relative;
         }
 
         #bg-media-container {
@@ -52,6 +53,9 @@
         }
 
         .floating-bubble {
+            position: absolute;
+            left: var(--pos-x);
+            top: var(--pos-y);
             width: var(--bubble-size);
             height: var(--bubble-size);
             background: var(--glass-bg);
@@ -65,9 +69,8 @@
             align-items: center;
             box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.6);
             text-align: center;
-            animation: bubbleFloat 8s ease-in-out infinite, fadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            transition: background 0.3s, border-color 0.3s;
+            animation: fadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: background 0.3s, border-color 0.3s, width 0.3s, height 0.3s, left 0.3s, top 0.3s;
         }
 
         .timer-display {
@@ -88,6 +91,14 @@
             opacity: 0.8;
             text-transform: uppercase;
             letter-spacing: 0.15em;
+            transition: opacity 0.5s ease;
+        }
+
+        .work-status {
+            font-size: 0.9rem;
+            font-weight: 500;
+            opacity: 0.6;
+            margin-top: 10px;
         }
 
         .actions {
@@ -116,10 +127,14 @@
             transform: scale(1.05);
         }
 
-        @keyframes bubbleFloat {
-            0%, 100% { transform: translate(0, 0); }
-            33% { transform: translate(10px, -15px); }
-            66% { transform: translate(-10px, 5px); }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         @keyframes fadeIn {
@@ -136,9 +151,10 @@
         <video id="bg-video" class="hidden" autoplay loop muted playsinline></video>
     </div>
 
-    <div class="floating-bubble">
+    <div id="bubble-el" class="floating-bubble">
         <div class="status-text" id="status">Breathe In...</div>
         <div class="timer-display" id="timer">--:--</div>
+        <div class="work-status hidden" id="work-status-text"></div>
         
         <div class="actions">
             <button id="skip-btn" onclick="dismiss()">Skip Break</button>
@@ -151,6 +167,10 @@
         }
 
         let seconds = 300;
+        let breakMessages = ["Breathe In..."];
+        let randomize = false;
+        let currentMessageIndex = 0;
+
         function updateTimer() {
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
@@ -159,29 +179,88 @@
             if (seconds > 0) seconds--;
         }
 
+        function rotateMessages() {
+            if (breakMessages.length <= 1) return;
+            
+            const statusEl = document.getElementById('status');
+            statusEl.style.opacity = 0;
+            
+            setTimeout(() => {
+                if (randomize) {
+                    let nextIndex;
+                    do {
+                        nextIndex = Math.floor(Math.random() * breakMessages.length);
+                    } while (nextIndex === currentMessageIndex && breakMessages.length > 1);
+                    currentMessageIndex = nextIndex;
+                } else {
+                    currentMessageIndex = (currentMessageIndex + 1) % breakMessages.length;
+                }
+                statusEl.innerText = breakMessages[currentMessageIndex];
+                statusEl.style.opacity = 0.8;
+            }, 500);
+        }
+
         window.chrome.webview.addEventListener('message', event => {
             if (event.data.action === "init") {
                 seconds = event.data.duration;
+                randomize = event.data.randomizeMessages;
+                
                 if (event.data.mode === "hard") {
                     document.getElementById('skip-btn').classList.add('hidden');
-                    document.getElementById('status').innerText = "Focus on resting";
                 }
 
-                if (event.data.isDark) {
-                    document.body.classList.add('dark');
-                } else {
-                    document.body.classList.remove('dark');
+                if (event.data.isDark) document.body.classList.add('dark');
+                else document.body.classList.remove('dark');
+
+                // Apply Visual Controls
+                const root = document.documentElement;
+                const bubble = document.getElementById('bubble-el');
+                
+                root.style.setProperty('--bubble-size', event.data.bubbleSize + 'px');
+                root.style.setProperty('--glass-bg', `rgba(${event.data.isDark ? '0,0,0' : '255,255,255'}, ${event.data.bubbleOpacity})`);
+                
+                // Smart Position: Account for bubble size so it doesn't clip off edge at 100%
+                bubble.style.left = `calc(${event.data.bubblePosX}% - ${event.data.bubbleSize * (event.data.bubblePosX/100)}px)`;
+                bubble.style.top = `calc(${event.data.bubblePosY}% - ${event.data.bubbleSize * (event.data.bubblePosY/100)}px)`;
+                
+                if (event.data.animationStyle !== 'none') {
+                    bubble.style.animation = `${event.data.animationStyle} 6s ease-in-out infinite`;
+                }
+
+                // Break Messages
+                if (event.data.breakMessages && event.data.breakMessages.length > 0) {
+                    breakMessages = event.data.breakMessages;
+                    document.getElementById('status').innerText = breakMessages[0];
+                    if (breakMessages.length > 1) {
+                        setInterval(rotateMessages, 5000);
+                    }
+                }
+
+                // Work Duration Status (Smart Formatting)
+                if (event.data.showWorkStatus) {
+                    const workStatusEl = document.getElementById('work-status-text');
+                    workStatusEl.classList.remove('hidden');
+                    const workMinsTotal = Math.floor(event.data.workDurationSecs / 60);
+                    
+                    if (workMinsTotal < 60) {
+                        workStatusEl.innerText = `You have been working for ${workMinsTotal} minutes`;
+                    } else {
+                        const hours = Math.floor(workMinsTotal / 60);
+                        const mins = workMinsTotal % 60;
+                        const hourText = hours === 1 ? '1 hour' : `${hours} hours`;
+                        const minText = mins === 0 ? '' : ` and ${mins} minutes`;
+                        workStatusEl.innerText = `You have been working for ${hourText}${minText}`;
+                    }
                 }
                 
                 if (event.data.mediaPath) {
                     const img = document.getElementById('bg-image');
                     const video = document.getElementById('bg-video');
-                    
                     const ext = event.data.mediaPath.split('.').pop().toLowerCase();
                     if (['mp4', 'webm', 'ogg'].includes(ext)) {
                         video.src = event.data.mediaPath;
                         video.classList.remove('hidden');
-                        video.play().catch(e => console.error("Autoplay failed:", e));
+                        video.play().catch(e => console.error(e));
                     } else {
                         img.src = event.data.mediaPath;
                         img.classList.remove('hidden');
@@ -189,11 +268,8 @@
                 }
                 updateTimer();
             } else if (event.data.action === "theme_changed") {
-                if (event.data.isDark) {
-                    document.body.classList.add('dark');
-                } else {
-                    document.body.classList.remove('dark');
-                }
+                if (event.data.isDark) document.body.classList.add('dark');
+                else document.body.classList.remove('dark');
             }
         });
 

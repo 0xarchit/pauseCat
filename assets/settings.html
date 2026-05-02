@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PauseCat Settings</title>
     <style>
         :root {
@@ -32,6 +32,13 @@
             --header-bg: #121212;
         }
 
+        html, body {
+            overflow: hidden;
+            touch-action: none; /* Prevents browser handling of pinch-zoom */
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background-color: var(--bg-color);
@@ -41,19 +48,18 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            user-select: none;
             transition: background-color 0.3s, color 0.3s;
         }
 
         .header {
-            padding: 20px 24px;
+            padding: 16px 24px;
             display: flex;
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid var(--border);
             background: var(--header-bg);
             z-index: 10;
+            flex-shrink: 0;
         }
 
         .header h1 {
@@ -63,44 +69,41 @@
         }
 
         .header img {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
             object-fit: contain;
         }
 
         .scroll-container {
             flex: 1;
             overflow-y: auto;
-            padding: 24px;
+            padding: 20px 24px;
             background: var(--secondary-bg);
-            scrollbar-width: thin;
-            scrollbar-color: var(--border) transparent;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
 
         .scroll-container::-webkit-scrollbar {
-            width: 6px;
-        }
-        .scroll-container::-webkit-scrollbar-thumb {
-            background-color: #4b5563;
-            border-radius: 10px;
+            display: none;
         }
 
         .section-title {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
+            margin-top: 10px;
         }
 
         .card {
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
+            padding: 16px;
+            margin-bottom: 20px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
@@ -108,7 +111,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            gap: 12px;
         }
 
         .setting-row:last-child {
@@ -119,6 +123,7 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
+            flex: 1;
         }
 
         .setting-label {
@@ -127,20 +132,29 @@
         }
 
         .setting-description {
-            font-size: 0.8125rem;
+            font-size: 0.75rem;
             color: var(--text-secondary);
         }
 
-        input[type="number"], select {
-            padding: 8px 12px;
+        input[type="number"], input[type="text"], select {
+            padding: 6px 10px;
             border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.875rem;
-            width: 80px;
+            border-radius: 6px;
+            font-size: 0.85rem;
             outline: none;
             transition: all 0.2s;
             background: var(--card-bg);
             color: var(--text-main);
+            font-family: inherit;
+        }
+
+        input[type="number"] { width: 65px; }
+        select { width: 110px; }
+
+        input[type="range"] {
+            width: 120px;
+            accent-color: var(--accent);
+            cursor: pointer;
         }
 
         select option {
@@ -148,23 +162,56 @@
             color: var(--text-main);
         }
 
-        .control select {
-            width: 100px;
-        }
-
         input:focus, select:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--ring);
+            box-shadow: 0 0 0 3px var(--ring);
+        }
+
+        /* Live Preview Container */
+        .preview-container {
+            width: 100%;
+            height: 160px;
+            background: #000;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .preview-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.5;
+        }
+
+        .preview-bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: 700;
+            pointer-events: none;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            transition: background-color 0.2s ease, width 0.2s ease, height 0.2s ease, left 0.2s ease, top 0.2s ease;
         }
 
         .media-preview-area {
             position: relative;
-            margin-top: 12px;
+            margin-top: 10px;
         }
 
         .media-preview {
             width: 100%;
-            height: 160px;
+            height: 140px;
             border: 2px dashed var(--border);
             border-radius: 10px;
             display: flex;
@@ -192,80 +239,78 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             color: var(--text-secondary);
+            font-size: 0.8rem;
         }
 
         .reset-media {
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: 6px;
+            right: 6px;
             background: rgba(16, 24, 40, 0.7);
             color: white;
             border: none;
             border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 0.75rem;
+            padding: 3px 6px;
+            font-size: 0.7rem;
             font-weight: 500;
             cursor: pointer;
             backdrop-filter: blur(4px);
             transition: all 0.2s;
         }
 
-        .reset-media:hover {
-            background: rgba(16, 24, 40, 0.9);
-        }
-
-        .whitelist-container {
-            margin-top: 12px;
+        .list-container {
+            margin-top: 10px;
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
         }
 
-        .whitelist-tag {
+        .tag {
             background: var(--ring);
             color: var(--accent);
-            padding: 4px 10px;
-            border-radius: 16px;
-            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             border: 1px solid var(--accent);
         }
 
-        .whitelist-tag span {
+        .tag span {
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 0.9rem;
             line-height: 1;
         }
 
-        .add-app-row {
+        .add-row {
             display: flex;
-            gap: 8px;
-            margin-top: 16px;
+            gap: 6px;
+            margin-top: 12px;
         }
 
-        .add-app-row select {
+        .add-row input, .add-row select {
             flex: 1;
             width: auto;
         }
 
         .footer {
-            padding: 16px 24px;
+            padding: 12px 24px;
             background: var(--header-bg);
             border-top: 1px solid var(--border);
             display: flex;
             justify-content: flex-end;
-            gap: 12px;
+            gap: 10px;
+            flex-shrink: 0;
         }
 
         button {
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-size: 0.875rem;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
@@ -291,8 +336,8 @@
         .switch {
             position: relative;
             display: inline-block;
-            width: 40px;
-            height: 20px;
+            width: 36px;
+            height: 18px;
         }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
@@ -301,8 +346,7 @@
             top: 0; left: 0; right: 0; bottom: 0;
             background-color: var(--border);
             transition: .3s;
-            border-radius: 20px;
-            border: 1px solid var(--border);
+            border-radius: 18px;
         }
         .slider:before {
             position: absolute;
@@ -312,12 +356,26 @@
             background-color: white;
             transition: .3s;
             border-radius: 50%;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
         }
-        input:checked + .slider { background-color: var(--accent); border-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(18px); }
 
         .hidden { display: none !important; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(-10px) translateX(5px); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: var(--pulse-opacity-start); }
+            50% { transform: scale(1.05); opacity: var(--pulse-opacity-end); }
+        }
     </style>
 </head>
 <body>
@@ -327,6 +385,13 @@
     </div>
 
     <div class="scroll-container">
+        <div class="section-title">Live Preview</div>
+        <div class="preview-container">
+            <img id="live-preview-bg-img" class="preview-bg hidden">
+            <video id="live-preview-bg-vid" class="preview-bg hidden" autoplay loop muted></video>
+            <div id="live-preview-bubble" class="preview-bubble">5:00</div>
+        </div>
+
         <div class="section-title">Schedule</div>
         <div class="card">
             <div class="setting-row">
@@ -349,29 +414,74 @@
             </div>
         </div>
 
+        <div class="section-title">Bubble Designer</div>
+        <div class="card">
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Transparency</span>
+                    <span class="setting-description">Glass effect intensity</span>
+                </div>
+                <input type="range" id="bubble_opacity" min="0.05" max="0.95" step="0.05" oninput="updatePreviewFromUI()">
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Bubble Size</span>
+                    <span class="setting-description">Diameter (Small to Large)</span>
+                </div>
+                <input type="range" id="bubble_size" min="300" max="800" step="10" oninput="updatePreviewFromUI()">
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Horizontal Position</span>
+                    <span class="setting-description">Left to Right (%)</span>
+                </div>
+                <input type="range" id="bubble_pos_x" min="0" max="100" step="1" oninput="updatePreviewFromUI()">
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Vertical Position</span>
+                    <span class="setting-description">Top to Bottom (%)</span>
+                </div>
+                <input type="range" id="bubble_pos_y" min="0" max="100" step="1" oninput="updatePreviewFromUI()">
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Animation Style</span>
+                    <span class="setting-description">Movement behavior</span>
+                </div>
+                <select id="animation_style" onchange="updatePreviewFromUI()">
+                    <option value="none">Static</option>
+                    <option value="float">Gentle Float</option>
+                    <option value="bounce">Elastic Bounce</option>
+                    <option value="pulse">Soft Pulse</option>
+                </select>
+            </div>
+        </div>
+
         <div class="section-title">Visuals</div>
         <div class="card">
             <div class="setting-row">
                 <div class="setting-info">
                     <span class="setting-label">Break Mode</span>
-                    <span class="setting-description">Hard mode prevents skipping</span>
+                    <span class="setting-description">Lock desktop during break</span>
                 </div>
                 <div class="control">
                     <select id="mode">
-                        <option value="soft">Soft</option>
-                        <option value="hard">Hard</option>
+                        <option value="soft">Soft Mode</option>
+                        <option value="hard">Hard Mode</option>
                     </select>
                 </div>
             </div>
-            <div class="setting-info" style="margin-top: 20px;">
-                <span class="setting-label">Custom Media</span>
-                <span class="setting-description">Display your own image or video</span>
+            
+            <div class="setting-info" style="margin-top: 16px;">
+                <span class="setting-label">Background Media</span>
+                <span class="setting-description">Select your own vibe</span>
             </div>
             <div class="media-preview-area">
                 <div class="media-preview" onclick="selectMedia()">
                     <div id="media-empty" class="media-placeholder">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        <span>Click to change...</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <span>Change Background</span>
                     </div>
                     <img id="preview-img" class="hidden">
                     <video id="preview-video" class="hidden" muted loop></video>
@@ -380,21 +490,50 @@
             </div>
         </div>
 
-        <div class="section-title">Smart Skip (Whitelist)</div>
+        <div class="section-title">Content</div>
         <div class="card">
-            <div class="setting-info">
-                <span class="setting-label">Protected Apps</span>
-                <span class="setting-description">Breaks will be postponed if these apps are in focus.</span>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">Show Work Status</span>
+                    <span class="setting-description">Display 'Working for X' timer</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="show_work_status">
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div id="whitelist-tags" class="whitelist-container">
-                <!-- Tags will be injected here -->
+
+            <div class="setting-row" style="margin-top: 16px;">
+                <div class="setting-info">
+                    <span class="setting-label">Randomize Messages</span>
+                    <span class="setting-description">Pick random message per break</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="randomize_messages">
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div class="add-app-row">
+
+            <div class="setting-info" style="margin-top: 16px;">
+                <span class="setting-label">Custom Messages</span>
+                <span class="setting-description">Messages to show during rest</span>
+            </div>
+            <div id="break-messages-tags" class="list-container"></div>
+            <div class="add-row">
+                <input type="text" id="new-message-input" placeholder="New message...">
+                <button class="btn-primary" style="padding: 6px 12px;" onclick="addBreakMessage()">Add</button>
+            </div>
+        </div>
+
+        <div class="section-title">Whitelist</div>
+        <div class="card">
+            <div id="whitelist-tags" class="list-container"></div>
+            <div class="add-row">
                 <select id="running-apps-select">
-                    <option value="">Select app to add...</option>
+                    <option value="">Select app...</option>
                 </select>
-                <button class="btn-primary" style="padding: 8px 12px; background-color: var(--secondary-bg); color: var(--text-main); border: 1px solid var(--border);" onclick="refreshApps()">Refresh</button>
-                <button class="btn-primary" style="padding: 8px 12px;" onclick="addWhitelistedApp()">Add</button>
+                <button class="btn-secondary" style="padding: 6px 12px;" onclick="refreshApps()">Refresh</button>
+                <button class="btn-primary" style="padding: 6px 12px;" onclick="addWhitelistedApp()">Add</button>
             </div>
         </div>
 
@@ -402,8 +541,8 @@
         <div class="card">
             <div class="setting-row">
                 <div class="setting-info">
-                    <span class="setting-label">Auto-start</span>
-                    <span class="setting-description">Start when Windows logs in</span>
+                    <span class="setting-label">Launch on Startup</span>
+                    <span class="setting-description">Auto-start PauseCat</span>
                 </div>
                 <label class="switch">
                     <input type="checkbox" id="autostart">
@@ -419,8 +558,21 @@
     </div>
 
     <script>
+        // Disable multi-touch pinch zoom via JS
+        document.addEventListener('touchstart', function (event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('gesturestart', function (event) {
+            event.preventDefault();
+        });
+
         let currentMediaPath = "";
         let currentWhitelist = [];
+        let currentBreakMessages = [];
+        let isDarkMode = false;
 
         function selectMedia() {
             window.chrome.webview.postMessage({ action: "select_media" });
@@ -441,24 +593,72 @@
             const app = select.value;
             if (app && !currentWhitelist.includes(app)) {
                 currentWhitelist.push(app);
-                renderWhitelist();
+                renderList('whitelist-tags', currentWhitelist, 'whitelist');
             }
         }
 
-        function removeWhitelistedApp(app) {
-            currentWhitelist = currentWhitelist.filter(a => a !== app);
-            renderWhitelist();
+        function addBreakMessage() {
+            const input = document.getElementById('new-message-input');
+            const msg = input.value.trim();
+            if (msg && !currentBreakMessages.includes(msg)) {
+                currentBreakMessages.push(msg);
+                input.value = "";
+                renderList('break-messages-tags', currentBreakMessages, 'messages');
+            }
         }
 
-        function renderWhitelist() {
-            const container = document.getElementById('whitelist-tags');
+        function renderList(containerId, list, type) {
+            const container = document.getElementById(containerId);
             container.innerHTML = "";
-            currentWhitelist.forEach(app => {
+            list.forEach(item => {
                 const tag = document.createElement('div');
-                tag.className = 'whitelist-tag';
-                tag.innerHTML = `${app} <span onclick="removeWhitelistedApp('${app}')">&times;</span>`;
+                tag.className = 'tag';
+                tag.innerHTML = `${item} <span onclick="window.handleRemove('${type}', '${item.replace(/'/g, "\\'")}')">&times;</span>`;
                 container.appendChild(tag);
             });
+        }
+
+        window.handleRemove = (type, item) => {
+            if (type === 'whitelist') {
+                currentWhitelist = currentWhitelist.filter(i => i !== item);
+                renderList('whitelist-tags', currentWhitelist, 'whitelist');
+            } else {
+                currentBreakMessages = currentBreakMessages.filter(i => i !== item);
+                renderList('break-messages-tags', currentBreakMessages, 'messages');
+            }
+        };
+
+        function updatePreviewFromUI() {
+            const bubble = document.getElementById('live-preview-bubble');
+            const opacity = parseFloat(document.getElementById('bubble_opacity').value);
+            const size = parseInt(document.getElementById('bubble_size').value);
+            const posX = parseInt(document.getElementById('bubble_pos_x').value);
+            const posY = parseInt(document.getElementById('bubble_pos_y').value);
+            const anim = document.getElementById('animation_style').value;
+
+            const previewScale = 4.8;
+            const previewSize = size / previewScale;
+            
+            bubble.style.width = previewSize + "px";
+            bubble.style.height = previewSize + "px";
+            bubble.style.fontSize = (previewSize / 4) + "px";
+            
+            bubble.style.backgroundColor = isDarkMode 
+                ? `rgba(0, 0, 0, ${opacity})` 
+                : `rgba(255, 255, 255, ${opacity})`;
+            
+            bubble.style.left = `calc(${posX}% - ${previewSize * (posX/100)}px)`;
+            bubble.style.top = `calc(${posY}% - ${previewSize * (posY/100)}px)`;
+            
+            if (anim === 'pulse') {
+                bubble.style.setProperty('--pulse-opacity-start', opacity);
+                bubble.style.setProperty('--pulse-opacity-end', Math.max(0, opacity - 0.3));
+                bubble.style.animation = `pulse 2s ease-in-out infinite`;
+            } else if (anim !== 'none') {
+                bubble.style.animation = `${anim} 3s ease-in-out infinite`;
+            } else {
+                bubble.style.animation = 'none';
+            }
         }
 
         function save() {
@@ -468,7 +668,15 @@
                 mode: document.getElementById('mode').value,
                 autostart: document.getElementById('autostart').checked,
                 overlay_animation: currentMediaPath || "default.webm",
-                whitelist: currentWhitelist
+                whitelist: currentWhitelist,
+                randomize_messages: document.getElementById('randomize_messages').checked,
+                break_messages: currentBreakMessages,
+                show_work_duration_status: document.getElementById('show_work_status').checked,
+                bubble_opacity: parseFloat(document.getElementById('bubble_opacity').value),
+                bubble_size: parseInt(document.getElementById('bubble_size').value),
+                bubble_pos_x: parseInt(document.getElementById('bubble_pos_x').value),
+                bubble_pos_y: parseInt(document.getElementById('bubble_pos_y').value),
+                animation_style: document.getElementById('animation_style').value
             };
             window.chrome.webview.postMessage({ action: "save", settings: settings });
         }
@@ -480,38 +688,43 @@
                 document.getElementById('break_duration').value = s.break_duration_secs / 60;
                 document.getElementById('mode').value = s.mode;
                 document.getElementById('autostart').checked = s.autostart;
-                if (s.overlay_animation) {
-                    updatePreview(s.overlay_animation);
-                }
-                currentWhitelist = s.whitelist || [];
-                renderWhitelist();
-
-                // Apply theme
-                if (event.data.isDark) {
-                    document.body.classList.add('dark');
-                } else {
-                    document.body.classList.remove('dark');
-                }
+                document.getElementById('randomize_messages').checked = s.randomize_messages;
+                document.getElementById('show_work_status').checked = s.show_work_duration_status !== false;
                 
-                // Fetch running apps list
+                document.getElementById('bubble_opacity').value = s.bubble_opacity || 0.1;
+                document.getElementById('bubble_size').value = s.bubble_size || 580;
+                document.getElementById('bubble_pos_x').value = s.bubble_pos_x || 5;
+                document.getElementById('bubble_pos_y').value = s.bubble_pos_y || 5;
+                document.getElementById('animation_style').value = s.animation_style || "float";
+
+                if (s.overlay_animation) updatePreview(s.overlay_animation);
+                
+                currentWhitelist = s.whitelist || [];
+                renderList('whitelist-tags', currentWhitelist, 'whitelist');
+
+                currentBreakMessages = s.break_messages || ["Breathe In..."];
+                renderList('break-messages-tags', currentBreakMessages, 'messages');
+
+                isDarkMode = event.data.isDark;
+                if (isDarkMode) document.body.classList.add('dark');
+                else document.body.classList.remove('dark');
+                
                 window.chrome.webview.postMessage({ action: "get_apps" });
+                updatePreviewFromUI();
 
             } else if (event.data.action === "media_selected") {
                 updatePreview(event.data.path);
             } else if (event.data.action === "theme_changed") {
-                if (event.data.isDark) {
-                    document.body.classList.add('dark');
-                } else {
-                    document.body.classList.remove('dark');
-                }
+                isDarkMode = event.data.isDark;
+                if (isDarkMode) document.body.classList.add('dark');
+                else document.body.classList.remove('dark');
+                updatePreviewFromUI();
             } else if (event.data.action === "apps_list") {
                 const select = document.getElementById('running-apps-select');
-                // Keep the first option
-                select.innerHTML = '<option value="">Select app to add...</option>';
+                select.innerHTML = '<option value="">Select app...</option>';
                 event.data.apps.forEach(app => {
                     const opt = document.createElement('option');
-                    opt.value = app;
-                    opt.textContent = app;
+                    opt.value = app; opt.textContent = app;
                     select.appendChild(opt);
                 });
             }
@@ -523,16 +736,13 @@
             const img = document.getElementById('preview-img');
             const video = document.getElementById('preview-video');
             const resetBtn = document.getElementById('reset-btn');
+            const liveImg = document.getElementById('live-preview-bg-img');
+            const liveVid = document.getElementById('live-preview-bg-vid');
             
-            empty.classList.add('hidden');
-            img.classList.add('hidden');
-            video.classList.add('hidden');
+            [empty, img, video, liveImg, liveVid].forEach(el => el.classList.add('hidden'));
 
-            if (path === "default.webm") {
-                resetBtn.classList.add('hidden');
-            } else {
-                resetBtn.classList.remove('hidden');
-            }
+            if (path === "default.webm") resetBtn.classList.add('hidden');
+            else resetBtn.classList.remove('hidden');
 
             const formattedPath = (path === "default.webm") 
                 ? "https://pausecat.app/assets/default.webm" 
@@ -540,12 +750,12 @@
 
             const ext = path.split('.').pop().toLowerCase();
             if (['mp4', 'webm', 'ogg'].includes(ext)) {
-                video.src = formattedPath;
-                video.classList.remove('hidden');
-                video.play().catch(e => console.error(e));
+                video.src = formattedPath; video.classList.remove('hidden');
+                liveVid.src = formattedPath; liveVid.classList.remove('hidden');
+                video.play().catch(() => {});
             } else {
-                img.src = formattedPath;
-                img.classList.remove('hidden');
+                img.src = formattedPath; img.classList.remove('hidden');
+                liveImg.src = formattedPath; liveImg.classList.remove('hidden');
             }
         }
     </script>
