@@ -42,7 +42,15 @@ impl SettingsWindow {
                 None, None, Some(instance), None
             )?;
 
-            Self::init_webview(hwnd, sender, current_settings)?;
+            // Store sender in window property
+            let sender_ptr = Box::into_raw(Box::new(sender));
+            SetPropW(hwnd, w!("Sender"), Some(HANDLE(sender_ptr as *mut _)))?;
+
+            // Store current settings in window property
+            let settings_ptr = Box::into_raw(Box::new(current_settings));
+            SetPropW(hwnd, w!("Settings"), Some(HANDLE(settings_ptr as *mut _)))?;
+
+            Self::init_webview(hwnd)?;
 
             let _ = ShowWindow(hwnd, SW_SHOW);
             let _ = UpdateWindow(hwnd);
@@ -51,7 +59,7 @@ impl SettingsWindow {
         }
     }
 
-    fn init_webview(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows::core::Result<()> {
+    fn init_webview(hwnd: HWND) -> windows::core::Result<()> {
         unsafe {
             CreateCoreWebView2EnvironmentWithOptions(None, None, None, 
                 &CreateCoreWebView2EnvironmentCompletedHandler::create(
@@ -65,6 +73,10 @@ impl SettingsWindow {
                                     result?;
                                     let controller = controller.ok_or_else(|| windows::core::Error::from_hresult(HRESULT(-1)))?;
                                     
+                                    // Store controller in window property
+                                    let controller_raw = controller.as_raw();
+                                    let _ = SetPropW(hwnd, w!("Controller"), Some(HANDLE(controller_raw as *mut _)));
+                                    
                                     let mut rect = RECT::default();
                                     let _ = GetClientRect(hwnd, &mut rect);
                                     let _ = controller.Bounds(&mut rect);
@@ -72,53 +84,60 @@ impl SettingsWindow {
                                     let webview = controller.CoreWebView2()?;
                                     let webview_settings = webview.Settings()?;
                                     let _ = webview_settings.SetIsWebMessageEnabled(true);
-                                    let _ = webview_settings.SetAreDevToolsEnabled(false);
-                                    let _ = webview_settings.SetAreDefaultContextMenusEnabled(false);
 
-                                    let sender_clone = sender.clone();
-                                    let webview_clone = webview.clone();
-                                    let mut token = 0i64;
-                                    let _ = webview.add_WebMessageReceived(
-                                        &WebMessageReceivedEventHandler::create(
-                                            Box::new(move |_, args| {
-                                                if let Some(args) = args {
-                                                    let mut message = PWSTR::null();
-                                                    if args.WebMessageAsJson(&mut message).is_ok() {
-                                                        let json = message.to_string().unwrap_or_default();
-                                                        if json.contains("\"action\":\"save\"") {
-                                                            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json) {
-                                                                if let Ok(new_settings) = serde_json::from_value::<Settings>(data["settings"].clone()) {
-                                                                    let _ = sender_clone.send(AppEvent::ConfigChanged(new_settings));
-                                                                    let _ = sender_clone.send(AppEvent::UserDismissed); 
+                                    let sender_handle = GetPropW(hwnd, w!("Sender"));
+                                    if !sender_handle.is_invalid() {
+                                        let sender = &*(sender_handle.0 as *const Sender<AppEvent>);
+                                        let sender_clone = sender.clone();
+                                        let webview_clone = webview.clone();
+                                        
+                                        let mut token = 0i64;
+                                        let _ = webview.add_WebMessageReceived(
+                                            &WebMessageReceivedEventHandler::create(
+                                                Box::new(move |_, args| {
+                                                    if let Some(args) = args {
+                                                        let mut message = PWSTR::null();
+                                                        if args.WebMessageAsJson(&mut message).is_ok() {
+                                                            let json = message.to_string().unwrap_or_default();
+                                                            if json.contains("\"action\":\"save\"") {
+                                                                if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json) {
+                                                                    if let Ok(new_settings) = serde_json::from_value::<Settings>(data["settings"].clone()) {
+                                                                        let _ = sender_clone.send(AppEvent::ConfigChanged(new_settings));
+                                                                        let _ = sender_clone.send(AppEvent::UserDismissed); 
+                                                                    }
+                                                                }
+                                                            } else if json.contains("\"action\":\"close\"") {
+                                                                let _ = sender_clone.send(AppEvent::UserDismissed);
+                                                            } else if json.contains("\"action\":\"select_media\"") {
+                                                                if let Some(path) = Self::pick_file() {
+                                                                    let path_json = path.replace('\\', "/");
+                                                                    let msg = format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path_json);
+                                                                    let hmsg = HSTRING::from(msg);
+                                                                    let _ = webview_clone.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr()));
                                                                 }
                                                             }
-                                                        } else if json.contains("\"action\":\"close\"") {
-                                                            let _ = sender_clone.send(AppEvent::UserDismissed);
-                                                        } else if json.contains("\"action\":\"select_media\"") {
-                                                            if let Some(path) = Self::pick_file() {
-                                                                let path_json = path.replace('\\', "/");
-                                                                let msg = format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path_json);
-                                                                let hmsg = HSTRING::from(msg);
-                                                                let _ = webview_clone.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr()));
-                                                            }
+                                                            CoTaskMemFree(Some(message.0 as *const _));
                                                         }
-                                                        CoTaskMemFree(Some(message.0 as *const _));
                                                     }
-                                                }
-                                                Ok(())
-                                            })
-                                        ),
-                                        &mut token
-                                    );
+                                                    Ok(())
+                                                })
+                                            ),
+                                            &mut token
+                                        );
+                                    }
 
                                     let html = include_str!("../assets/settings.html");
                                     let hhtml = HSTRING::from(html);
                                     let _ = webview.NavigateToString(PCWSTR(hhtml.as_ptr()));
 
-                                    let json_settings = serde_json::to_string(&settings).unwrap_or_default();
-                                    let msg = format!("{{\"action\":\"load\", \"settings\": {}}}", json_settings);
-                                    let hmsg = HSTRING::from(msg);
-                                    let _ = webview.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr()));
+                                    let settings_handle = GetPropW(hwnd, w!("Settings"));
+                                    if !settings_handle.is_invalid() {
+                                        let settings = &*(settings_handle.0 as *const Settings);
+                                        let json_settings = serde_json::to_string(settings).unwrap_or_default();
+                                        let msg = format!("{{\"action\":\"load\", \"settings\": {}}}", json_settings);
+                                        let hmsg = HSTRING::from(msg);
+                                        let _ = webview.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr()));
+                                    }
 
                                     Ok(())
                                 })
@@ -162,7 +181,37 @@ impl Drop for SettingsWindow {
 
 unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     match msg {
-        WM_DESTROY => LRESULT(0),
+        WM_SIZE => {
+            let controller_handle = GetPropW(hwnd, w!("Controller"));
+            if !controller_handle.is_invalid() {
+                let controller: ICoreWebView2Controller = std::mem::transmute_copy(&(controller_handle.0 as *const ()));
+                let mut rect = RECT::default();
+                let _ = GetClientRect(hwnd, &mut rect);
+                let _ = controller.Bounds(&mut rect);
+                std::mem::forget(controller);
+            }
+            LRESULT(0)
+        }
+        WM_DESTROY => {
+            let sender_handle = RemovePropW(hwnd, w!("Sender"));
+            if let Ok(h) = sender_handle {
+                if !h.is_invalid() { drop(Box::from_raw(h.0 as *mut Sender<AppEvent>)); }
+            }
+            
+            let settings_handle = RemovePropW(hwnd, w!("Settings"));
+            if let Ok(h) = settings_handle {
+                if !h.is_invalid() { drop(Box::from_raw(h.0 as *mut Settings)); }
+            }
+
+            let controller_handle = RemovePropW(hwnd, w!("Controller"));
+            if let Ok(h) = controller_handle {
+                if !h.is_invalid() {
+                    let controller: ICoreWebView2Controller = std::mem::transmute_copy(&(h.0 as *const ()));
+                    drop(controller);
+                }
+            }
+            LRESULT(0)
+        }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
     }
 }

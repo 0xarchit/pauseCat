@@ -45,13 +45,19 @@ impl TrayIcon {
                 None, None, Some(instance), Some(Box::into_raw(Box::new(sender)) as *mut _)
             )?;
 
+            // Load the embedded icon (resource ID 1 by default in winres)
+            let h_icon = match LoadIconW(Some(instance), PCWSTR(1 as *const u16)) {
+                Ok(h) => h,
+                Err(_) => LoadIconW(None, IDI_APPLICATION)?,
+            };
+
             let mut nid = NOTIFYICONDATAW {
                 cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
                 hWnd: hwnd,
                 uID: ID_TRAY_ICON,
                 uFlags: NIF_ICON | NIF_MESSAGE | NIF_TIP,
                 uCallbackMessage: WM_TRAY_ICON,
-                hIcon: LoadIconW(None, IDI_APPLICATION)?,
+                hIcon: h_icon,
                 ..Default::default()
             };
             
