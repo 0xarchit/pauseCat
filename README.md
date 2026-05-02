@@ -1,33 +1,70 @@
-# PauseCat
+# 🐾 PauseCat
 
-PauseCat is a lightweight Windows background application built in Rust that encourages users to take periodic breaks through a full-screen immersive reminder experience. The reminder uses background blur and stunning glassmorphism visuals to reduce fatigue and improve productivity.
+**The Professional Break Reminder for Windows.**
 
-## Tech Stack
-- **Language:** Rust
-- **System APIs:** Win32 (via windows-rs)
-- **UI Rendering:** WebView2 (Fluent Design / Glassmorphism)
+PauseCat is a high-performance, lightweight Windows background application designed to reduce computer fatigue and improve productivity by encouraging periodic breaks. It provides a full-screen immersive reminder experience with beautiful glassmorphism visuals and intelligent system integration.
 
-## Build Prerequisites
-- **Rust stable toolchain**
-- **WebView2 runtime** (pre-installed on Windows 10/11)
-- **WiX Toolset v3** (if you want to build the installer)
+[![Status](https://img.shields.io/badge/Status-Active%20Development-000000.svg?style=for-the-badge&logo=rocket&logoColor=white&labelColor=000000&color=000000)](https://github.com/0xarchit/pauseCat/pulse)
+[![License](https://img.shields.io/badge/License-Apache%202.0-000000.svg?style=for-the-badge&logo=apache&logoColor=white&labelColor=000000&color=000000)](LICENSE)
+[![Rust](https://img.shields.io/badge/Rust-1.75+-000000.svg?style=for-the-badge&logo=rust&logoColor=white&labelColor=000000&color=000000)](https://rust-lang.org)
+[![Security: CodeQL](https://img.shields.io/badge/Security-CodeQL--Audit-000000.svg?style=for-the-badge&logo=github&logoColor=white&labelColor=000000&color=000000)](https://github.com/0xarchit/pauseCat/actions/workflows/codeql.yml)
 
-## Building the App
-To build the optimized release binary:
+---
+
+## ✨ Features
+
+- **🚀 Zero-Lag Overlay:** Uses advanced pre-capture and pre-blur technology to trigger break reminders instantly with no white flicker.
+- **💎 Glassmorphism UI:** Stunning, translucent UI bubble with smooth floating animations and Inter typography.
+- **🎵 Smart Media Control:** Automatically pauses your music (Spotify, YouTube, etc.) when a break starts and resumes it when you're done.
+- **⚙️ Fluent Settings:** Native-feeling configuration panel to customize work/break durations, break mode (Soft/Hard), and auto-start.
+- **🎨 Custom Media:** Support for user-selected images, videos (WebM/MP4), and GIFs for the break background.
+- **📦 Tiny Footprint:** Optimized Rust binary (~1.2 MB) with shared WebView2 environments for low RAM usage.
+- **🛡️ Secure & Private:** All settings and logs are stored locally in `%APPDATA%`. No data ever leaves your machine.
+
+---
+
+## 🛠 Installation
+
+1. Download the latest `pausecat_installer.msi` from the [Releases](https://github.com/0xarchit/pauseCat/releases) page.
+2. Run the installer and follow the professional wizard.
+3. (Optional) Check "Launch PauseCat now" to start your first session immediately.
+
+---
+
+## 💻 Development
+
+### Prerequisites
+- [Rust](https://rustup.rs/) (Stable)
+- [WiX Toolset v4/v7](https://wixtoolset.org/) (for building the installer)
+- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
+
+### Build the Optimized Binary
 ```powershell
 $env:RUSTFLAGS="-C link-arg=/OPT:REF -C link-arg=/OPT:ICF"
 cargo build --release
 ```
 
-## Creating the Installer (Installation Dialog)
-PauseCat uses the WiX Toolset to create a professional Windows installer (.msi).
-1. Install [WiX Toolset v3](https://wixtoolset.org/releases/).
-2. Install the `cargo-wix` helper: `cargo install cargo-wix`.
-3. Run: `cargo wix --nocapture`.
-This will generate an `.msi` file in `target/wix/`. Running this MSI will show the **Installation Dialog**.
+### Build the Professional Installer
+```powershell
+wix build wix\main.wxs -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -o target\release\pausecat_installer.msi
+```
 
-## Usage
-Once installed or running, PauseCat lives in your **System Tray** (🐾 icon).
-- **Right-click** the tray icon to access Settings, Pause/Resume, or Exit.
-- **Hard Mode** prevents you from skipping breaks for maximum focus.
-- **Custom Media:** You can select your own images or videos to display during breaks in the settings panel.
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for details on how to get started.
+
+## 🛡 Security
+
+If you discover a security vulnerability, please refer to our [SECURITY.md](.github/SECURITY.md).
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+### Acknowledgements
+The `assets/default.webm` file included in this project was sourced from the internet. It is intended for demonstration purposes only and is not intended to infringe upon any existing copyrights. If you are the owner of this content and wish to have it removed or credited differently, please contact us.
+
+---
+*Built with ❤️ in Rust for a healthier digital life.*
