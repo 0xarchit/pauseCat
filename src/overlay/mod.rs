@@ -64,6 +64,14 @@ impl OverlayWindow {
         unsafe {
             for alpha in (0..=255).step_by(15) {
                 let _ = SetLayeredWindowAttributes(self.hwnd, COLORREF(0), alpha as u8, LWA_ALPHA);
+                
+                // Process pending messages to keep UI responsive and allow painting
+                let mut msg = MSG::default();
+                while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).into() {
+                    let _ = TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+
                 std::thread::sleep(std::time::Duration::from_millis(10));
             }
             let _ = SetLayeredWindowAttributes(self.hwnd, COLORREF(0), 255, LWA_ALPHA);
