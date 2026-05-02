@@ -40,7 +40,7 @@ pub fn init_global_env() -> Result<()> {
 
         CreateCoreWebView2EnvironmentWithOptions(None, PCWSTR(data_path_h.as_ptr()), None, 
             &CreateCoreWebView2EnvironmentCompletedHandler::create(
-                Box::new(move |result, env| {
+                Box::new(move |_result, env| {
                     let env_res = match env {
                         Some(e) => Ok(e),
                         None => Err(windows::core::Error::from_hresult(HRESULT(0x80004005u32 as i32))), // E_FAIL

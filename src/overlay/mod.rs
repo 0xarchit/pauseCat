@@ -125,8 +125,8 @@ unsafe extern "system" fn overlay_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM,
         WM_DESTROY => {
             let sender_handle = GetPropW(hwnd, w!("Sender"));
             if !sender_handle.is_invalid() {
-                let _ = Box::from_raw(sender_handle.0 as *mut Sender<AppEvent>);
-                RemovePropW(hwnd, w!("Sender"));
+                let _ = unsafe { Box::from_raw(sender_handle.0 as *mut Sender<AppEvent>) };
+                let _ = unsafe { RemovePropW(hwnd, w!("Sender")) };
             }
             webview::unregister_controller(hwnd);
             LRESULT(0)

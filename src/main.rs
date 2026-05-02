@@ -14,7 +14,6 @@ use pausecat::timer;
 use pausecat::overlay::{OverlayWindow, capture, blur, webview_env};
 use pausecat::settings_ui::SettingsWindow;
 
-const TIMER_ID_CHANNEL: usize = 1;
 
 /// Main application structure to hold state and router logic.
 struct App {
