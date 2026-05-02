@@ -47,6 +47,10 @@ impl OverlayWindow {
 
             SetPropW(hwnd, w!("Sender"), Some(HANDLE(Box::into_raw(Box::new(sender)) as *mut _)))?;
 
+            // Apply immersive dark mode immediately after creation
+            let is_dark = crate::system::is_dark_mode();
+            crate::system::apply_immersive_dark_mode(hwnd, is_dark);
+
             let hdc = GetDC(Some(hwnd));
             let mem_dc = CreateCompatibleDC(Some(hdc));
             let h_bitmap = CreateCompatibleBitmap(hdc, width, height);
@@ -114,6 +118,10 @@ impl OverlayWindow {
                 std::thread::sleep(std::time::Duration::from_millis(16));
             }
         });
+    }
+
+    pub fn update_theme(&self, is_dark: bool) {
+        webview::update_theme(self.hwnd, is_dark);
     }
 }
 

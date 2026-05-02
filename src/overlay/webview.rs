@@ -137,11 +137,13 @@ pub fn init(hwnd: HWND, settings: crate::settings::Settings) -> windows::core::R
                                             } else {
                                                 format!("https://pausecat.app/local/{}", general_purpose::STANDARD.encode(&anim_path))
                                             };
+                                            let is_dark = crate::system::is_dark_mode();
                                             let init_msg = format!(
-                                                "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\"}}",
-                                                settings_clone.break_duration_secs, mode_str, final_media_path
+                                                "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\", \"isDark\": {}}}",
+                                                settings_clone.break_duration_secs, mode_str, final_media_path, is_dark
                                             );
                                             let _ = webview_clone.PostWebMessageAsJson(PCWSTR(HSTRING::from(init_msg).as_ptr()));
+
                                         }
                                         CoTaskMemFree(Some(message.0 as *const _));
                                     }
@@ -177,5 +179,17 @@ pub fn resize_controller(hwnd: HWND) {
 pub fn unregister_controller(hwnd: HWND) {
     if let Ok(mut lock) = OVERLAY_CONTROLLERS.lock() {
         lock.remove(&(hwnd.0 as isize));
+    }
+}
+
+pub fn update_theme(hwnd: HWND, is_dark: bool) {
+    if let Ok(lock) = OVERLAY_CONTROLLERS.lock() {
+        if let Some(safe_controller) = lock.get(&(hwnd.0 as isize)) {
+            if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {
+                let msg = format!("{{\"action\":\"theme_changed\", \"isDark\": {}}}", is_dark);
+                let hmsg = HSTRING::from(msg);
+                let _ = unsafe { webview.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr())) };
+            }
+        }
     }
 }

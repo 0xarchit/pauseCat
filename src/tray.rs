@@ -118,6 +118,20 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
             let create_struct = lparam.0 as *const CREATESTRUCTW;
             let sender = (*create_struct).lpCreateParams;
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, sender as isize);
+            
+            // Send initial theme state
+            let is_dark = crate::system::is_dark_mode();
+            let _ = (&*(sender as *const Sender<AppEvent>)).send(AppEvent::ThemeChanged(is_dark));
+            
+            LRESULT(0)
+        }
+        WM_SETTINGCHANGE => {
+            let sender_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const Sender<AppEvent>;
+            if !sender_ptr.is_null() {
+                let sender = &*sender_ptr;
+                let is_dark = crate::system::is_dark_mode();
+                let _ = sender.send(AppEvent::ThemeChanged(is_dark));
+            }
             LRESULT(0)
         }
         WM_TRAY_ICON => {

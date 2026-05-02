@@ -9,4 +9,5 @@ pub enum AppEvent {
     OpenSettings,
     Quit,
     ConfigChanged(Settings),
+    ThemeChanged(bool), // true = Dark, false = Light
 }
