@@ -5,7 +5,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::thread;
 use windows::Win32::UI::WindowsAndMessaging::*;
-use windows::Win32::UI::Input::KeyboardAndMouse::*;
 use windows::Win32::System::Com::*;
 use windows::Win32::Foundation::*;
 use pausecat::settings::Settings;
@@ -26,6 +25,8 @@ struct App {
     tray: Option<TrayIcon>,
     reminder_overlay: Option<OverlayWindow>,
     settings_window: Option<SettingsWindow>,
+    // Track if we paused media to resume it later
+    was_media_playing: bool,
 }
 
 impl App {
@@ -42,6 +43,7 @@ impl App {
             tray: None,
             reminder_overlay: None,
             settings_window: None,
+            was_media_playing: false,
         }
     }
 
@@ -50,10 +52,11 @@ impl App {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
 
-        // 1. Initialize Tray
+        // Ensure registry autostart matches current settings
+        let _ = self.settings.read().unwrap().update_autostart();
+
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
 
-        // 2. Start Timer Engine
         let settings_clone = self.settings.clone();
         let event_tx_clone = self.event_tx.clone();
         let paused_clone = self.paused.clone();
@@ -69,13 +72,13 @@ impl App {
         match event {
             AppEvent::ShowOverlay => {
                 if self.reminder_overlay.is_none() {
-                    self.toggle_media(); // Pause media
+                    self.pause_media();
                     self.show_overlay();
                 }
             }
             AppEvent::HideOverlay | AppEvent::UserDismissed => {
                 if self.reminder_overlay.is_some() {
-                    self.toggle_media(); // Resume media
+                    self.resume_media();
                 }
                 self.reminder_overlay = None;
                 self.settings_window = None;
@@ -120,37 +123,23 @@ impl App {
         }
     }
 
-    fn toggle_media(&self) {
-        // Broadacst Play/Pause key to the whole system.
-        // This is highly compatible with browsers (YouTube), Spotify, and players.
+    fn pause_media(&mut self) {
+        // Use an explicit PAUSE command instead of a toggle.
+        // Command 47 is APPCOMMAND_MEDIA_PAUSE.
+        // This is safer as it won't start media if it's already stopped.
         unsafe {
-            let inputs = [
-                INPUT {
-                    r#type: INPUT_KEYBOARD,
-                    Anonymous: INPUT_0 {
-                        ki: KEYBDINPUT {
-                            wVk: VK_MEDIA_PLAY_PAUSE,
-                            wScan: 0,
-                            dwFlags: KEYBD_EVENT_FLAGS(0),
-                            time: 0,
-                            dwExtraInfo: 0,
-                        },
-                    },
-                },
-                INPUT {
-                    r#type: INPUT_KEYBOARD,
-                    Anonymous: INPUT_0 {
-                        ki: KEYBDINPUT {
-                            wVk: VK_MEDIA_PLAY_PAUSE,
-                            wScan: 0,
-                            dwFlags: KEYEVENTF_KEYUP,
-                            time: 0,
-                            dwExtraInfo: 0,
-                        },
-                    },
-                },
-            ];
-            let _ = SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
+            let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(47 << 16)));
+        }
+        self.was_media_playing = true; 
+    }
+
+    fn resume_media(&mut self) {
+        if self.was_media_playing {
+            // Command 46 is APPCOMMAND_MEDIA_PLAY.
+            unsafe {
+                let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(46 << 16)));
+            }
+            self.was_media_playing = false;
         }
     }
 
@@ -195,7 +184,6 @@ fn check_webview2() -> windows::core::Result<bool> {
 fn main() -> windows::core::Result<()> {
     let _ = setup_logging();
 
-    // Single instance check
     unsafe {
         use windows::Win32::System::Threading::CreateMutexW;
         let _handle = CreateMutexW(None, true, windows::core::w!("Global\\PauseCatSingleInstanceMutex"));
