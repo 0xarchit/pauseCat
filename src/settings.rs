@@ -29,6 +29,7 @@ pub struct Settings {
     pub mode: BreakMode,
     pub autostart: bool,
     pub overlay_animation: String,
+    pub whitelist: Vec<String>,
 }
 
 impl Default for Settings {
@@ -39,6 +40,7 @@ impl Default for Settings {
             mode: BreakMode::Soft,
             autostart: true,
             overlay_animation: "default.webm".to_string(),
+            whitelist: Vec::new(),
         }
     }
 }

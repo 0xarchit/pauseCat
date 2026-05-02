@@ -131,7 +131,7 @@
             color: var(--text-secondary);
         }
 
-        .control input[type="number"], .control select {
+        input[type="number"], select {
             padding: 8px 12px;
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -143,11 +143,16 @@
             color: var(--text-main);
         }
 
+        select option {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+        }
+
         .control select {
             width: 100px;
         }
 
-        .control input:focus, .control select:focus {
+        input:focus, select:focus {
             border-color: var(--accent);
             box-shadow: 0 0 0 4px var(--ring);
         }
@@ -209,6 +214,43 @@
 
         .reset-media:hover {
             background: rgba(16, 24, 40, 0.9);
+        }
+
+        .whitelist-container {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .whitelist-tag {
+            background: var(--ring);
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid var(--accent);
+        }
+
+        .whitelist-tag span {
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .add-app-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .add-app-row select {
+            flex: 1;
+            width: auto;
         }
 
         .footer {
@@ -338,6 +380,24 @@
             </div>
         </div>
 
+        <div class="section-title">Smart Skip (Whitelist)</div>
+        <div class="card">
+            <div class="setting-info">
+                <span class="setting-label">Protected Apps</span>
+                <span class="setting-description">Breaks will be postponed if these apps are in focus.</span>
+            </div>
+            <div id="whitelist-tags" class="whitelist-container">
+                <!-- Tags will be injected here -->
+            </div>
+            <div class="add-app-row">
+                <select id="running-apps-select">
+                    <option value="">Select app to add...</option>
+                </select>
+                <button class="btn-primary" style="padding: 8px 12px; background-color: var(--secondary-bg); color: var(--text-main); border: 1px solid var(--border);" onclick="refreshApps()">Refresh</button>
+                <button class="btn-primary" style="padding: 8px 12px;" onclick="addWhitelistedApp()">Add</button>
+            </div>
+        </div>
+
         <div class="section-title">System</div>
         <div class="card">
             <div class="setting-row">
@@ -360,9 +420,14 @@
 
     <script>
         let currentMediaPath = "";
+        let currentWhitelist = [];
 
         function selectMedia() {
             window.chrome.webview.postMessage({ action: "select_media" });
+        }
+
+        function refreshApps() {
+            window.chrome.webview.postMessage({ action: "get_apps" });
         }
 
         function resetToDefault(event) {
@@ -371,13 +436,39 @@
             updatePreview("default.webm");
         }
 
+        function addWhitelistedApp() {
+            const select = document.getElementById('running-apps-select');
+            const app = select.value;
+            if (app && !currentWhitelist.includes(app)) {
+                currentWhitelist.push(app);
+                renderWhitelist();
+            }
+        }
+
+        function removeWhitelistedApp(app) {
+            currentWhitelist = currentWhitelist.filter(a => a !== app);
+            renderWhitelist();
+        }
+
+        function renderWhitelist() {
+            const container = document.getElementById('whitelist-tags');
+            container.innerHTML = "";
+            currentWhitelist.forEach(app => {
+                const tag = document.createElement('div');
+                tag.className = 'whitelist-tag';
+                tag.innerHTML = `${app} <span onclick="removeWhitelistedApp('${app}')">&times;</span>`;
+                container.appendChild(tag);
+            });
+        }
+
         function save() {
             const settings = {
                 work_duration_secs: document.getElementById('work_duration').value * 60,
                 break_duration_secs: document.getElementById('break_duration').value * 60,
                 mode: document.getElementById('mode').value,
                 autostart: document.getElementById('autostart').checked,
-                overlay_animation: currentMediaPath || "default.webm"
+                overlay_animation: currentMediaPath || "default.webm",
+                whitelist: currentWhitelist
             };
             window.chrome.webview.postMessage({ action: "save", settings: settings });
         }
@@ -392,12 +483,19 @@
                 if (s.overlay_animation) {
                     updatePreview(s.overlay_animation);
                 }
-                // Apply theme immediately from initial load data
+                currentWhitelist = s.whitelist || [];
+                renderWhitelist();
+
+                // Apply theme
                 if (event.data.isDark) {
                     document.body.classList.add('dark');
                 } else {
                     document.body.classList.remove('dark');
                 }
+                
+                // Fetch running apps list
+                window.chrome.webview.postMessage({ action: "get_apps" });
+
             } else if (event.data.action === "media_selected") {
                 updatePreview(event.data.path);
             } else if (event.data.action === "theme_changed") {
@@ -406,6 +504,16 @@
                 } else {
                     document.body.classList.remove('dark');
                 }
+            } else if (event.data.action === "apps_list") {
+                const select = document.getElementById('running-apps-select');
+                // Keep the first option
+                select.innerHTML = '<option value="">Select app to add...</option>';
+                event.data.apps.forEach(app => {
+                    const opt = document.createElement('option');
+                    opt.value = app;
+                    opt.textContent = app;
+                    select.appendChild(opt);
+                });
             }
         });
 

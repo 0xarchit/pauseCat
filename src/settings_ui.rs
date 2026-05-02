@@ -172,6 +172,12 @@ impl SettingsWindow {
                                                 }
                                             } else if json.contains("\"action\":\"close\"") {
                                                 let _ = sender_clone.send(AppEvent::UserDismissed);
+                                            } else if json.contains("\"action\":\"get_apps\"") {
+                                                let apps = crate::system::get_running_apps();
+                                                let apps_json = serde_json::to_string(&apps).unwrap_or_default();
+                                                let msg = format!("{{\"action\":\"apps_list\", \"apps\": {}}}", apps_json);
+                                                let hmsg = HSTRING::from(msg);
+                                                let _ = webview_clone.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr()));
                                             } else if json.contains("\"action\":\"select_media\"") {
                                                 if let Some(path) = pick_file() {
                                                     let msg = format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path.replace('\\', "/"));

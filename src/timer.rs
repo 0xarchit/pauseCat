@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use crate::events::AppEvent;
 use crate::settings::Settings;
 use crate::overlay::{capture, blur};
+use crate::system;
 
 pub fn run(settings: Arc<RwLock<Settings>>, event_tx: Sender<AppEvent>, paused: Arc<AtomicBool>) {
     run_optimized(settings, event_tx, paused, Arc::new(RwLock::new(None)));
@@ -45,7 +46,7 @@ pub fn run_optimized(
                     time_remaining = Duration::from_secs(current_work_secs as u64);
                     pre_capture_triggered = false;
                     last_tick = Instant::now();
-                    log::info!("Timer reactively updated to {}m work / {}m break.", current_work_secs / 60, current_break_secs / 60);
+                    log::info!("Timer reactively updated.");
                 }
             }
         }
@@ -63,6 +64,25 @@ pub fn run_optimized(
             
             if !is_breaking && time_remaining.as_secs() <= 5 && !pre_capture_triggered {
                 pre_capture_triggered = true;
+                
+                // Whitelist Check before pre-capture
+                let should_skip = {
+                    let s = settings.read().unwrap();
+                    if let Some(fg_process) = system::get_foreground_process_name() {
+                        s.whitelist.iter().any(|p| p.to_lowercase() == fg_process.to_lowercase())
+                    } else {
+                        false
+                    }
+                };
+
+                if should_skip {
+                    // Postpone by 1 minute
+                    time_remaining = Duration::from_secs(60);
+                    pre_capture_triggered = false;
+                    log::info!("Break postponed: Whitelisted app in focus.");
+                    continue;
+                }
+
                 let bg_clone = pre_captured_bg.clone();
                 thread::spawn(move || {
                     if let Ok(captured) = capture::capture_virtual_screen() {
@@ -74,6 +94,23 @@ pub fn run_optimized(
             }
         } else {
             if !is_breaking {
+                // Final Whitelist Check before showing overlay
+                let should_skip = {
+                    let s = settings.read().unwrap();
+                    if let Some(fg_process) = system::get_foreground_process_name() {
+                        s.whitelist.iter().any(|p| p.to_lowercase() == fg_process.to_lowercase())
+                    } else {
+                        false
+                    }
+                };
+
+                if should_skip {
+                    time_remaining = Duration::from_secs(60);
+                    pre_capture_triggered = false;
+                    log::info!("Break skipped: Whitelisted app in focus.");
+                    continue;
+                }
+
                 is_breaking = true;
                 let _ = event_tx.send(AppEvent::ShowOverlay);
                 
