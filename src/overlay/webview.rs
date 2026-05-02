@@ -50,7 +50,8 @@ pub fn init(hwnd: HWND, settings: crate::settings::Settings) -> windows::core::R
                     let _ = webview_settings.SetIsWebMessageEnabled(true);
                     let _ = webview_settings.SetAreDefaultContextMenusEnabled(false);
                     let _ = webview_settings.SetAreDevToolsEnabled(false);
-
+                    let _ = webview_settings.SetIsZoomControlEnabled(false);
+                    let _ = webview_settings.SetIsStatusBarEnabled(false);
                     let assets_path = webview_env::get_assets_path();
                     let env_resource = env_inner.clone();
                     let _ = webview.AddWebResourceRequestedFilter(w!("https://pausecat.app/*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
@@ -138,9 +139,24 @@ pub fn init(hwnd: HWND, settings: crate::settings::Settings) -> windows::core::R
                                                 format!("https://pausecat.app/local/{}", general_purpose::STANDARD.encode(&anim_path))
                                             };
                                             let is_dark = crate::system::is_dark_mode();
+                                            
+                                            let messages_json = serde_json::to_string(&settings_clone.break_messages).unwrap_or_else(|_| "[]".to_string());
+
                                             let init_msg = format!(
-                                                "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\", \"isDark\": {}}}",
-                                                settings_clone.break_duration_secs, mode_str, final_media_path, is_dark
+                                                "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\", \"isDark\": {}, \"bubbleOpacity\": {}, \"bubbleSize\": {}, \"bubblePosX\": {}, \"bubblePosY\": {}, \"animationStyle\": \"{}\", \"breakMessages\": {}, \"randomizeMessages\": {}, \"showWorkStatus\": {}, \"workDurationSecs\": {}}}",
+                                                settings_clone.break_duration_secs, 
+                                                mode_str, 
+                                                final_media_path, 
+                                                is_dark,
+                                                settings_clone.bubble_opacity,
+                                                settings_clone.bubble_size,
+                                                settings_clone.bubble_pos_x,
+                                                settings_clone.bubble_pos_y,
+                                                settings_clone.animation_style,
+                                                messages_json,
+                                                settings_clone.randomize_messages,
+                                                settings_clone.show_work_duration_status,
+                                                settings_clone.work_duration_secs
                                             );
                                             let _ = webview_clone.PostWebMessageAsJson(PCWSTR(HSTRING::from(init_msg).as_ptr()));
 

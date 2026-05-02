@@ -30,6 +30,15 @@ pub struct Settings {
     pub autostart: bool,
     pub overlay_animation: String,
     pub whitelist: Vec<String>,
+    pub break_messages: Vec<String>,
+    pub randomize_messages: bool,
+    pub show_work_duration_status: bool,
+    // Visual Customizations
+    pub bubble_opacity: f32,
+    pub bubble_size: u32,
+    pub bubble_pos_x: i32, // Percentage 0-100
+    pub bubble_pos_y: i32, // Percentage 0-100
+    pub animation_style: String,
 }
 
 impl Default for Settings {
@@ -41,6 +50,19 @@ impl Default for Settings {
             autostart: true,
             overlay_animation: "default.webm".to_string(),
             whitelist: Vec::new(),
+            break_messages: vec![
+                "Breathe In...".to_string(),
+                "Take a stretch".to_string(),
+                "Rest your eyes".to_string(),
+                "Hydrate yourself".to_string()
+            ],
+            randomize_messages: false,
+            show_work_duration_status: true,
+            bubble_opacity: 0.1,
+            bubble_size: 580,
+            bubble_pos_x: 5,
+            bubble_pos_y: 5,
+            animation_style: "float".to_string(),
         }
     }
 }
@@ -90,9 +112,10 @@ impl Settings {
     pub fn validate(&mut self) {
         if self.work_duration_secs < 300 { self.work_duration_secs = 300; }
         if self.work_duration_secs > 14400 { self.work_duration_secs = 14400; }
-        
         if self.break_duration_secs < 60 { self.break_duration_secs = 60; }
         if self.break_duration_secs > 1800 { self.break_duration_secs = 1800; }
+        if self.bubble_opacity < 0.0 { self.bubble_opacity = 0.0; }
+        if self.bubble_opacity > 1.0 { self.bubble_opacity = 1.0; }
     }
 
     pub fn update_autostart(&self) -> Result<(), SettingsError> {
