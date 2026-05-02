@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PauseCat Settings</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: #4b5563;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+        }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-secondary {
+            background-color: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        .btn-secondary:hover { background-color: #f9fafb; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span style="font-size: 2rem;">🐾</span>
+        <h1>PauseCat Settings</h1>
+    </div>
+
+    <div class="card">
+        <div class="group">
+            <label for="work_duration">Work Duration (minutes)</label>
+            <input type="number" id="work_duration" min="5" max="240" step="5">
+        </div>
+
+        <div class="group">
+            <label for="break_duration">Break Duration (minutes)</label>
+            <input type="number" id="break_duration" min="1" max="30" step="1">
+        </div>
+
+        <div class="group">
+            <label for="mode">Break Mode</label>
+            <select id="mode">
+                <option value="soft">Soft (Can skip)</option>
+                <option value="hard">Hard (Immersive)</option>
+            </select>
+        </div>
+
+        <div class="group checkbox-group">
+            <input type="checkbox" id="autostart">
+            <label for="autostart">Launch on Windows startup</label>
+        </div>
+
+        <div class="actions">
+            <button class="btn-secondary" onclick="window.chrome.webview.postMessage({action: 'close'})">Cancel</button>
+            <button class="btn-primary" onclick="save()">Save Changes</button>
+        </div>
+    </div>
+
+    <script>
+        function save() {
+            const settings = {
+                work_duration_secs: document.getElementById('work_duration').value * 60,
+                break_duration_secs: document.getElementById('break_duration').value * 60,
+                mode: document.getElementById('mode').value,
+                autostart: document.getElementById('autostart').checked,
+                overlay_animation: "cat.webp"
+            };
+            window.chrome.webview.postMessage({ action: "save", settings: settings });
+        }
+
+        window.chrome.webview.addEventListener('message', event => {
+            if (event.data.action === "load") {
+                const s = event.data.settings;
+                document.getElementById('work_duration').value = s.work_duration_secs / 60;
+                document.getElementById('break_duration').value = s.break_duration_secs / 60;
+                document.getElementById('mode').value = s.mode;
+                document.getElementById('autostart').checked = s.autostart;
+            }
+        });
+    </script>
+</body>
+</html>

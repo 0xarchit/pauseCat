@@ -9,6 +9,7 @@ use pausecat::tray::TrayIcon;
 use pausecat::events::AppEvent;
 use pausecat::timer;
 use pausecat::overlay::{OverlayWindow, capture, blur};
+use pausecat::settings_ui::SettingsWindow;
 
 const TIMER_ID_CHANNEL: usize = 1;
 
@@ -19,7 +20,8 @@ struct App {
     event_tx: mpsc::Sender<AppEvent>,
     event_rx: mpsc::Receiver<AppEvent>,
     tray: Option<TrayIcon>,
-    overlay: Option<OverlayWindow>,
+    reminder_overlay: Option<OverlayWindow>,
+    settings_window: Option<SettingsWindow>,
 }
 
 impl App {
@@ -34,7 +36,8 @@ impl App {
             event_tx,
             event_rx,
             tray: None,
-            overlay: None,
+            reminder_overlay: None,
+            settings_window: None,
         }
     }
 
@@ -61,12 +64,14 @@ impl App {
     fn handle_event(&mut self, event: AppEvent) {
         match event {
             AppEvent::ShowOverlay => {
-                if self.overlay.is_none() {
+                if self.reminder_overlay.is_none() {
                     self.show_overlay();
                 }
             }
             AppEvent::HideOverlay | AppEvent::UserDismissed => {
-                self.overlay = None;
+                // UserDismissed can come from both Overlay and Settings
+                self.reminder_overlay = None;
+                self.settings_window = None;
             }
             AppEvent::TogglePause => {
                 let new_paused = !self.paused.load(Ordering::Relaxed);
@@ -76,12 +81,18 @@ impl App {
                 }
             }
             AppEvent::OpenSettings => {
-                println!("Open Settings requested");
+                if self.settings_window.is_none() {
+                    let current_settings = self.settings.read().unwrap().clone();
+                    if let Ok(win) = SettingsWindow::new(self.event_tx.clone(), current_settings) {
+                        self.settings_window = Some(win);
+                    }
+                }
             }
             AppEvent::ConfigChanged(new_settings) => {
                 let mut settings = self.settings.write().unwrap();
                 *settings = new_settings;
                 let _ = settings.save();
+                println!("Settings updated and saved.");
             }
             AppEvent::Quit => {
                 unsafe { PostQuitMessage(0) };
@@ -96,7 +107,7 @@ impl App {
             
             if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), captured.width, captured.height, blurred) {
                 overlay.fade_in();
-                self.overlay = Some(overlay);
+                self.reminder_overlay = Some(overlay);
             }
         }
     }
