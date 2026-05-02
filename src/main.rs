@@ -119,7 +119,56 @@ impl App {
     }
 }
 
+fn setup_logging() -> windows::core::Result<()> {
+    let mut path = dirs::config_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    path.push("PauseCat");
+    std::fs::create_dir_all(&path).map_err(|e| windows::core::Error::from_hresult(windows::core::HRESULT(e.raw_os_error().unwrap_or(-1) as i32)))?;
+    path.push("app.log");
+    
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| windows::core::Error::from_hresult(windows::core::HRESULT(e.raw_os_error().unwrap_or(-1) as i32)))?;
+
+    let target = Box::new(file);
+    env_logger::Builder::from_default_env()
+        .target(env_logger::Target::Pipe(target))
+        .filter_level(log::LevelFilter::Info)
+        .init();
+
+    log::info!("PauseCat started");
+    Ok(())
+}
+
+fn check_webview2() -> windows::core::Result<bool> {
+    use webview2_com::Microsoft::Web::WebView2::Win32::*;
+    unsafe {
+        let mut version = windows::core::PWSTR::null();
+        let result = GetAvailableCoreWebView2BrowserVersionString(windows::core::PCWSTR::null(), &mut version);
+        Ok(result.is_ok())
+    }
+}
+
 fn main() -> windows::core::Result<()> {
+    let _ = setup_logging();
+
+    match check_webview2() {
+        Ok(true) => log::info!("WebView2 runtime found."),
+        _ => {
+            log::error!("WebView2 runtime not found.");
+            unsafe {
+                MessageBoxW(
+                    None,
+                    windows::core::w!("PauseCat requires the Microsoft Edge WebView2 Runtime to be installed. Please install it and try again."),
+                    windows::core::w!("PauseCat Error"),
+                    MB_OK | MB_ICONERROR,
+                );
+            }
+            return Ok(());
+        }
+    }
+
     let mut app = App::new();
     app.init()?;
 
