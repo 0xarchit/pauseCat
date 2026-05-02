@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build & Release
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install WiX
+        run: dotnet tool install --global wix
+
+      - name: Build Optimized Binary
+        run: |
+          $env:RUSTFLAGS="-C link-arg=/OPT:REF -C link-arg=/OPT:ICF"
+          cargo build --release
+
+      - name: Build MSI Installer
+        run: |
+          wix build wix/main.wxs -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -o target/release/PauseCat_Installer.msi
+
+      - name: Upload Release Artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/PauseCat_Installer.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
