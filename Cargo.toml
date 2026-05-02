@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-windows = { version = "0.52", features = [
+windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_UI_Shell",
@@ -14,8 +14,9 @@ windows = { version = "0.52", features = [
     "Win32_System_Registry",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_Graphics_Dwm",
+    "Win32_System_Com",
 ] }
-webview2-com = "0.19"
+webview2-com = "0.39"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 image = "0.24"

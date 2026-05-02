@@ -18,10 +18,10 @@ pub fn capture_virtual_screen() -> Result<CapturedScreen> {
         let height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
         let h_screen_dc = GetDC(None);
-        let h_memory_dc = CreateCompatibleDC(h_screen_dc);
+        let h_memory_dc = CreateCompatibleDC(Some(h_screen_dc));
         let h_bitmap = CreateCompatibleBitmap(h_screen_dc, width, height);
 
-        let h_old_obj = SelectObject(h_memory_dc, h_bitmap);
+        let h_old_obj = SelectObject(h_memory_dc, h_bitmap.into());
 
         BitBlt(
             h_memory_dc,
@@ -29,7 +29,7 @@ pub fn capture_virtual_screen() -> Result<CapturedScreen> {
             0,
             width,
             height,
-            h_screen_dc,
+            Some(h_screen_dc),
             x,
             y,
             SRCCOPY,
@@ -62,7 +62,7 @@ pub fn capture_virtual_screen() -> Result<CapturedScreen> {
 
         // Cleanup
         let _ = SelectObject(h_memory_dc, h_old_obj);
-        let _ = DeleteObject(h_bitmap);
+        let _ = DeleteObject(h_bitmap.into());
         let _ = DeleteDC(h_memory_dc);
         ReleaseDC(None, h_screen_dc);
 

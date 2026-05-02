@@ -14,7 +14,7 @@ pub mod blur;
 pub mod webview;
 
 static mut OVERLAY_SENDER: Option<Sender<AppEvent>> = None;
-static mut KEYBOARD_HOOK: HHOOK = HHOOK(0);
+static mut KEYBOARD_HOOK: HHOOK = HHOOK(std::ptr::null_mut());
 
 pub struct OverlayWindow {
     hwnd: HWND,
@@ -23,7 +23,7 @@ pub struct OverlayWindow {
 impl OverlayWindow {
     pub fn new(sender: Sender<AppEvent>, width: i32, height: i32, blur_data: Vec<u8>) -> Result<Self> {
         unsafe {
-            OVERLAY_SENDER = Some(sender);
+            OVERLAY_SENDER = Some(sender.clone());
             
             let instance: HINSTANCE = GetModuleHandleW(None)?.into();
             let class_name = w!("PauseCatOverlayClass");
@@ -45,17 +45,16 @@ impl OverlayWindow {
                 w!("PauseCat Overlay"),
                 WS_POPUP | WS_VISIBLE,
                 0, 0, width, height,
-                None, None, instance, Some(Box::into_raw(Box::new(blur_data)) as *mut _)
-            );
+                None, None, Some(instance), Some(Box::into_raw(Box::new(blur_data)) as *mut _)
+            )?;
 
-            if hwnd.0 == 0 {
-                return Err(Error::from_win32());
-            }
-
-            SetLayeredWindowAttributes(hwnd, COLORREF(0), 0, LWA_ALPHA)?;
+            let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), 0, LWA_ALPHA);
             
+            // Initialize WebView2 layer
+            webview::WebViewLayer::init(hwnd, sender)?;
+
             // Set up emergency exit hook
-            KEYBOARD_HOOK = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), instance, 0)?;
+            KEYBOARD_HOOK = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), Some(instance), 0)?;
 
             Ok(Self { hwnd })
         }
@@ -75,9 +74,9 @@ impl OverlayWindow {
 impl Drop for OverlayWindow {
     fn drop(&mut self) {
         unsafe {
-            if KEYBOARD_HOOK.0 != 0 {
+            if !KEYBOARD_HOOK.0.is_null() {
                 let _ = UnhookWindowsHookEx(KEYBOARD_HOOK);
-                KEYBOARD_HOOK = HHOOK(0);
+                KEYBOARD_HOOK = HHOOK(std::ptr::null_mut());
             }
             let _ = DestroyWindow(self.hwnd);
         }
@@ -129,7 +128,7 @@ unsafe extern "system" fn overlay_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM,
                 );
             }
 
-            EndPaint(hwnd, &ps);
+            let _ = EndPaint(hwnd, &ps);
             LRESULT(0)
         }
         WM_KEYDOWN => {
