@@ -50,6 +50,7 @@
     </Feature>
 
     <!-- Professional SaaS UI with Post-Install Launch -->
+    <WixVariable Id="WixUILicenseRtf" Value="assets\LICENSE.rtf" />
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
     
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch PauseCat now" />
