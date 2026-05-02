@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
@@ -181,7 +183,18 @@ fn main() -> windows::core::Result<()> {
     }
 
     let mut app = App::new();
-    app.init()?;
+    if let Err(e) = app.init() {
+        log::error!("Failed to initialize app: {:?}", e);
+        unsafe {
+            MessageBoxW(
+                None,
+                windows::core::w!("Failed to initialize PauseCat. Please check the logs."),
+                windows::core::w!("PauseCat Error"),
+                MB_OK | MB_ICONERROR,
+            );
+        }
+        return Err(e);
+    }
 
     unsafe {
         let _ = SetTimer(None, TIMER_ID_CHANNEL, 100, None);
