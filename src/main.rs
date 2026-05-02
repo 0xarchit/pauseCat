@@ -4,6 +4,7 @@ use std::sync::mpsc;
 use std::thread;
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::Win32::System::Com::*;
+use windows::Win32::Foundation::*;
 use pausecat::settings::Settings;
 use pausecat::tray::TrayIcon;
 use pausecat::events::AppEvent;
@@ -152,6 +153,16 @@ fn check_webview2() -> windows::core::Result<bool> {
 
 fn main() -> windows::core::Result<()> {
     let _ = setup_logging();
+
+    // Single instance check
+    unsafe {
+        use windows::Win32::System::Threading::CreateMutexW;
+        let _handle = CreateMutexW(None, true, windows::core::w!("Global\\PauseCatSingleInstanceMutex"));
+        if GetLastError() == ERROR_ALREADY_EXISTS {
+            log::warn!("Another instance of PauseCat is already running. exiting.");
+            return Ok(());
+        }
+    }
 
     match check_webview2() {
         Ok(true) => log::info!("WebView2 runtime found."),
