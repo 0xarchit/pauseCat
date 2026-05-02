@@ -8,13 +8,18 @@ on:
   schedule:
     - cron: '8 5 * * 0'
 
+# Global permissions for the entire workflow
+permissions:
+  security-events: write
+  contents: read
+  pull-requests: read
+  actions: read
+  packages: read
+
 jobs:
   detect-changes:
     name: Detect Changed Languages
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-      contents: read
     outputs:
       languages: ${{ steps.set-languages.outputs.languages }}
     steps:
@@ -55,11 +60,6 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.languages != '[]' }}
     runs-on: windows-latest
-    permissions:
-      security-events: write
-      packages: read
-      actions: read
-      contents: read
 
     strategy:
       fail-fast: false
