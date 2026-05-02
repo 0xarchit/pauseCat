@@ -14,7 +14,6 @@ use pausecat::timer;
 use pausecat::overlay::{OverlayWindow, capture, blur, webview_env};
 use pausecat::settings_ui::SettingsWindow;
 
-
 /// Main application structure to hold state and router logic.
 struct App {
     settings: Arc<RwLock<Settings>>,
@@ -25,7 +24,6 @@ struct App {
     reminder_overlay: Option<OverlayWindow>,
     settings_window: Option<SettingsWindow>,
     was_media_playing: bool,
-    // Optimization: Pre-captured and pre-blurred background
     pre_captured_bg: Arc<RwLock<Option<(i32, i32, Vec<u8>)>>>,
 }
 
@@ -53,12 +51,8 @@ impl App {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
 
-        // Optimization: Initialize shared WebView2 environment early
         let _ = webview_env::init_global_env();
-
-        // Sync autostart
         let _ = self.settings.read().unwrap().update_autostart();
-
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
 
         let settings_clone = self.settings.clone();
@@ -67,7 +61,6 @@ impl App {
         let bg_clone = self.pre_captured_bg.clone();
         
         thread::spawn(move || {
-            // Optimization: Modified timer loop to signal pre-capture
             timer::run_optimized(settings_clone, event_tx_clone, paused_clone, bg_clone);
         });
 
@@ -116,11 +109,9 @@ impl App {
     }
 
     fn show_overlay_optimized(&mut self) {
-        // Use pre-captured background if available for zero-lag launch
         let (width, height, data) = if let Some(bg) = self.pre_captured_bg.read().unwrap().clone() {
             bg
         } else {
-            // Fallback to instant capture if pre-capture failed or wasn't ready
             if let Ok(captured) = capture::capture_virtual_screen() {
                 let blurred = blur::blur(&captured.data, captured.width as usize, captured.height as usize, 10.0);
                 (captured.width, captured.height, blurred)
@@ -133,12 +124,13 @@ impl App {
             self.reminder_overlay = Some(overlay);
         }
         
-        // Clear pre-capture buffer
         let mut lock = self.pre_captured_bg.write().unwrap();
         *lock = None;
     }
 
     fn pause_media(&mut self) {
+        // Use the explicit Win32 broadcast for maximum reliability.
+        // APPCOMMAND_MEDIA_PAUSE (47)
         unsafe {
             let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(47 << 16)));
         }
@@ -147,6 +139,7 @@ impl App {
 
     fn resume_media(&mut self) {
         if self.was_media_playing {
+            // APPCOMMAND_MEDIA_PLAY (46)
             unsafe {
                 let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(46 << 16)));
             }

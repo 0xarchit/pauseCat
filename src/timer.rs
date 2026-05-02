@@ -18,12 +18,13 @@ pub fn run_optimized(
     pre_captured_bg: Arc<RwLock<Option<(i32, i32, Vec<u8>)>>>
 ) {
     let mut last_tick = Instant::now();
-    let mut work_remaining;
+    let mut time_remaining;
+    let mut is_breaking = false;
     let mut pre_capture_triggered = false;
     
     {
         let s = settings.read().unwrap();
-        work_remaining = Duration::from_secs(s.work_duration_secs as u64);
+        time_remaining = Duration::from_secs(s.work_duration_secs as u64);
     }
 
     loop {
@@ -37,12 +38,11 @@ pub fn run_optimized(
         let elapsed = last_tick.elapsed();
         last_tick = Instant::now();
         
-        if work_remaining > elapsed {
-            work_remaining -= elapsed;
+        if time_remaining > elapsed {
+            time_remaining -= elapsed;
             
-            // Optimization: Pre-capture background a few seconds before break starts
-            // Use a range check and flag to ensure it triggers exactly once per cycle
-            if work_remaining.as_secs() <= 5 && !pre_capture_triggered {
+            // Optimization: Pre-capture background before break starts
+            if !is_breaking && time_remaining.as_secs() <= 5 && !pre_capture_triggered {
                 pre_capture_triggered = true;
                 let bg_clone = pre_captured_bg.clone();
                 thread::spawn(move || {
@@ -54,26 +54,22 @@ pub fn run_optimized(
                 });
             }
         } else {
-            // Start break
-            let _ = event_tx.send(AppEvent::ShowOverlay);
-            
-            let break_duration;
-            {
+            if !is_breaking {
+                // Work ended -> Start break
+                is_breaking = true;
+                let _ = event_tx.send(AppEvent::ShowOverlay);
+                
                 let s = settings.read().unwrap();
-                break_duration = Duration::from_secs(s.break_duration_secs as u64);
-            }
-            
-            thread::sleep(break_duration);
-            
-            let _ = event_tx.send(AppEvent::HideOverlay);
-            
-            // Reset for next work cycle
-            {
+                time_remaining = Duration::from_secs(s.break_duration_secs as u64);
+            } else {
+                // Break ended -> Resume work
+                is_breaking = false;
+                pre_capture_triggered = false;
+                let _ = event_tx.send(AppEvent::HideOverlay);
+                
                 let s = settings.read().unwrap();
-                work_remaining = Duration::from_secs(s.work_duration_secs as u64);
+                time_remaining = Duration::from_secs(s.work_duration_secs as u64);
             }
-            pre_capture_triggered = false;
-            last_tick = Instant::now();
         }
     }
 }

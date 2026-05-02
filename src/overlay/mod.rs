@@ -102,6 +102,7 @@ impl OverlayWindow {
             let hwnd = HWND(hwnd_val.0 as *mut _);
             for i in (0..=255).step_by(15) {
                 unsafe {
+                    if !IsWindow(Some(hwnd)).as_bool() { break; }
                     let blend = BLENDFUNCTION {
                         BlendOp: AC_SRC_OVER as u8,
                         SourceConstantAlpha: i as u8,
@@ -116,6 +117,15 @@ impl OverlayWindow {
     }
 }
 
+impl Drop for OverlayWindow {
+    fn drop(&mut self) {
+        unsafe {
+            // CRITICAL: Close the actual Win32 window when the struct is dropped!
+            let _ = DestroyWindow(self.hwnd);
+        }
+    }
+}
+
 unsafe extern "system" fn overlay_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     match msg {
         WM_SIZE => {
@@ -125,8 +135,8 @@ unsafe extern "system" fn overlay_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM,
         WM_DESTROY => {
             let sender_handle = GetPropW(hwnd, w!("Sender"));
             if !sender_handle.is_invalid() {
-                let _ = unsafe { Box::from_raw(sender_handle.0 as *mut Sender<AppEvent>) };
-                let _ = unsafe { RemovePropW(hwnd, w!("Sender")) };
+                let _ = Box::from_raw(sender_handle.0 as *mut Sender<AppEvent>);
+                let _ = RemovePropW(hwnd, w!("Sender"));
             }
             webview::unregister_controller(hwnd);
             LRESULT(0)

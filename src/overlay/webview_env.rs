@@ -2,7 +2,6 @@ use std::sync::Mutex;
 use webview2_com::Microsoft::Web::WebView2::Win32::*;
 use webview2_com::CreateCoreWebView2EnvironmentCompletedHandler;
 use windows::core::*;
-use windows::Win32::System::Com::*;
 use std::path::PathBuf;
 
 struct SendSafeEnv(ICoreWebView2Environment);
