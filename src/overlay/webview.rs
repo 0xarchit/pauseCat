@@ -28,13 +28,11 @@ pub fn register_controller(hwnd: HWND, controller: ICoreWebView2Controller) {
 }
 
 fn get_assets_path() -> PathBuf {
-    // 1. Check next to EXE (Installed)
     if let Ok(mut path) = std::env::current_exe() {
         path.pop();
         path.push("assets");
         if path.exists() { return path; }
     }
-    // 2. Check current dir (Dev)
     let mut path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     path.push("assets");
     path
@@ -54,14 +52,14 @@ pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows
 
         CreateCoreWebView2EnvironmentWithOptions(None, PCWSTR(data_path_h.as_ptr()), None, 
             &CreateCoreWebView2EnvironmentCompletedHandler::create(
-                Box::new(move |result: windows::core::Result<()>, env: Option<ICoreWebView2Environment>| {
+                Box::new(move |result, env| {
                     result?;
                     let env = env.ok_or_else(|| windows::core::Error::from_hresult(HRESULT(-1)))?;
                     let env_inner = env.clone();
 
                     env.CreateCoreWebView2Controller(hwnd, 
                         &CreateCoreWebView2ControllerCompletedHandler::create(
-                            Box::new(move |result: windows::core::Result<()>, controller: Option<ICoreWebView2Controller>| {
+                            Box::new(move |result, controller| {
                                 result?;
                                 let controller = controller.ok_or_else(|| windows::core::Error::from_hresult(HRESULT(-1)))?;
                                 
@@ -78,7 +76,6 @@ pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows
                                 let _ = webview_settings.SetAreDefaultContextMenusEnabled(false);
                                 let _ = webview_settings.SetAreDevToolsEnabled(false);
 
-                                // Unified Asset Server (Interception)
                                 let assets_path = get_assets_path();
                                 let env_resource = env_inner.clone();
                                 let _ = webview.AddWebResourceRequestedFilter(w!("https://pausecat.app/*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
@@ -94,17 +91,13 @@ pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows
                                                 if uri.starts_with("https://pausecat.app/") {
                                                     let path_part = uri.trim_start_matches("https://pausecat.app/");
                                                     let target_path = if path_part.starts_with("assets/") {
-                                                        // Serve from bundled assets
-                                                        let filename = path_part.trim_start_matches("assets/");
-                                                        assets_path.join(filename)
+                                                        assets_path.join(path_part.trim_start_matches("assets/"))
                                                     } else if path_part.starts_with("local/") {
-                                                        // Serve from base64 encoded local path
                                                         let encoded = path_part.trim_start_matches("local/");
-                                                        let path_bytes = general_purpose::STANDARD.decode(encoded).unwrap_or_default();
-                                                        PathBuf::from(String::from_utf8(path_bytes).unwrap_or_default())
-                                                    } else {
-                                                        PathBuf::new()
-                                                    };
+                                                        if let Ok(path_bytes) = general_purpose::STANDARD.decode(encoded) {
+                                                            PathBuf::from(String::from_utf8(path_bytes).unwrap_or_default())
+                                                        } else { PathBuf::new() }
+                                                    } else { PathBuf::new() };
 
                                                     if target_path.exists() && target_path.is_file() {
                                                         if let Ok(content) = std::fs::read(&target_path) {
@@ -113,7 +106,6 @@ pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows
                                                             let _ = stream.Write(content.as_ptr() as *const _, content.len() as u32, Some(&mut written));
                                                             let _ = stream.Seek(0, STREAM_SEEK_SET, None);
                                                             
-                                                            // Determine content type
                                                             let ext = target_path.extension().and_then(|e| e.to_str()).unwrap_or("");
                                                             let mime = match ext.to_lowercase().as_str() {
                                                                 "webm" => "video/webm",
@@ -124,7 +116,8 @@ pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows
                                                                 _ => "application/octet-stream",
                                                             };
 
-                                                            let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(format!("Content-Type: {}", mime)))?;
+                                                            let headers = format!("Content-Type: {}\r\n", mime);
+                                                            let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(headers))?;
                                                             let _ = args.SetResponse(&response);
                                                         }
                                                     }
@@ -144,7 +137,7 @@ pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows
                                 let mut token = 0i64;
                                 let _ = webview.add_WebMessageReceived(
                                     &WebMessageReceivedEventHandler::create(
-                                        Box::new(move |_, args: Option<ICoreWebView2WebMessageReceivedEventArgs>| {
+                                        Box::new(move |_, args| {
                                             if let Some(args) = args {
                                                 let mut message = PWSTR::null();
                                                 if args.WebMessageAsJson(&mut message).is_ok() {
@@ -158,8 +151,6 @@ pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows
                                                             crate::settings::BreakMode::Hard => "hard",
                                                         };
                                                         let anim_path = settings_clone.overlay_animation.clone();
-                                                        
-                                                        // Resolve final URL
                                                         let final_media_path = if anim_path == "default.webm" || !anim_path.contains(std::path::MAIN_SEPARATOR) {
                                                             format!("https://pausecat.app/assets/{}", anim_path)
                                                         } else {
@@ -168,9 +159,7 @@ pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows
 
                                                         let init_msg = format!(
                                                             "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\"}}",
-                                                            settings_clone.break_duration_secs,
-                                                            mode_str,
-                                                            final_media_path
+                                                            settings_clone.break_duration_secs, mode_str, final_media_path
                                                         );
                                                         let _ = webview_clone.PostWebMessageAsJson(PCWSTR(HSTRING::from(init_msg).as_ptr()));
                                                     }

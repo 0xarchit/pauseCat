@@ -116,7 +116,6 @@ impl SettingsWindow {
                                     let _ = webview_settings.SetAreDefaultContextMenusEnabled(false);
                                     let _ = webview_settings.SetAreDevToolsEnabled(false);
 
-                                    // Unified Asset Server
                                     let assets_path = get_assets_path();
                                     let env_resource = env_inner.clone();
                                     let _ = webview.AddWebResourceRequestedFilter(w!("https://pausecat.app/*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
@@ -136,11 +135,10 @@ impl SettingsWindow {
                                                             assets_path.join(filename)
                                                         } else if path_part.starts_with("local/") {
                                                             let encoded = path_part.trim_start_matches("local/");
-                                                            let path_bytes = general_purpose::STANDARD.decode(encoded).unwrap_or_default();
-                                                            PathBuf::from(String::from_utf8(path_bytes).unwrap_or_default())
-                                                        } else {
-                                                            PathBuf::new()
-                                                        };
+                                                            if let Ok(path_bytes) = general_purpose::STANDARD.decode(encoded) {
+                                                                PathBuf::from(String::from_utf8(path_bytes).unwrap_or_default())
+                                                            } else { PathBuf::new() }
+                                                        } else { PathBuf::new() };
 
                                                         if target_path.exists() && target_path.is_file() {
                                                             if let Ok(content) = std::fs::read(&target_path) {
@@ -160,12 +158,14 @@ impl SettingsWindow {
                                                                     _ => "application/octet-stream",
                                                                 };
 
-                                                                let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(format!("Content-Type: {}", mime)))?;
+                                                                // CRITICAL: Explicit Content-Type header with CRLF
+                                                                let headers = format!("Content-Type: {}\r\n", mime);
+                                                                let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(headers))?;
                                                                 let _ = args.SetResponse(&response);
                                                             }
                                                         }
+                                                        CoTaskMemFree(Some(uri_ptr.0 as *const _));
                                                     }
-                                                    CoTaskMemFree(Some(uri_ptr.0 as *const _));
                                                 }
                                                 Ok(())
                                             })
@@ -212,7 +212,8 @@ impl SettingsWindow {
                                     );
 
                                     let html = include_str!("../assets/settings.html");
-                                    let _ = webview.NavigateToString(PCWSTR(HSTRING::from(html).as_ptr()));
+                                    let hhtml = HSTRING::from(html);
+                                    let _ = webview.NavigateToString(PCWSTR(hhtml.as_ptr()));
 
                                     let settings_handle = GetPropW(hwnd, w!("Settings"));
                                     let settings = &*(settings_handle.0 as *const Settings);

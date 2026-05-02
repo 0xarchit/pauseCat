@@ -25,7 +25,6 @@ struct App {
     tray: Option<TrayIcon>,
     reminder_overlay: Option<OverlayWindow>,
     settings_window: Option<SettingsWindow>,
-    // Track if we paused media to resume it later
     was_media_playing: bool,
 }
 
@@ -52,7 +51,6 @@ impl App {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
 
-        // Ensure registry autostart matches current settings
         let _ = self.settings.read().unwrap().update_autostart();
 
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
@@ -102,7 +100,6 @@ impl App {
                 let mut settings = self.settings.write().unwrap();
                 *settings = new_settings;
                 let _ = settings.save();
-                log::info!("Settings updated and saved.");
             }
             AppEvent::Quit => {
                 unsafe { PostQuitMessage(0) };
@@ -124,9 +121,6 @@ impl App {
     }
 
     fn pause_media(&mut self) {
-        // Use an explicit PAUSE command instead of a toggle.
-        // Command 47 is APPCOMMAND_MEDIA_PAUSE.
-        // This is safer as it won't start media if it's already stopped.
         unsafe {
             let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(47 << 16)));
         }
@@ -135,7 +129,6 @@ impl App {
 
     fn resume_media(&mut self) {
         if self.was_media_playing {
-            // Command 46 is APPCOMMAND_MEDIA_PLAY.
             unsafe {
                 let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(46 << 16)));
             }
@@ -153,7 +146,7 @@ impl App {
 fn setup_logging() -> windows::core::Result<()> {
     let mut path = dirs::config_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
     path.push("PauseCat");
-    std::fs::create_dir_all(&path).map_err(|e| windows::core::Error::from_hresult(windows::core::HRESULT(e.raw_os_error().unwrap_or(-1) as i32)))?;
+    let _ = std::fs::create_dir_all(&path);
     path.push("app.log");
     
     let file = std::fs::OpenOptions::new()
@@ -188,20 +181,18 @@ fn main() -> windows::core::Result<()> {
         use windows::Win32::System::Threading::CreateMutexW;
         let _handle = CreateMutexW(None, true, windows::core::w!("Global\\PauseCatSingleInstanceMutex"));
         if GetLastError() == ERROR_ALREADY_EXISTS {
-            log::warn!("Another instance of PauseCat is already running. exiting.");
             return Ok(());
         }
     }
 
     match check_webview2() {
-        Ok(true) => log::info!("WebView2 runtime found."),
+        Ok(true) => log::info!("WebView2 found."),
         _ => {
-            log::error!("WebView2 runtime not found.");
             unsafe {
                 MessageBoxW(
                     None,
-                    windows::core::w!("PauseCat requires the Microsoft Edge WebView2 Runtime to be installed. Please install it and try again."),
-                    windows::core::w!("PauseCat Error"),
+                    windows::core::w!("PauseCat requires WebView2 Runtime."),
+                    windows::core::w!("Error"),
                     MB_OK | MB_ICONERROR,
                 );
             }
@@ -211,15 +202,6 @@ fn main() -> windows::core::Result<()> {
 
     let mut app = App::new();
     if let Err(e) = app.init() {
-        log::error!("Failed to initialize app: {:?}", e);
-        unsafe {
-            MessageBoxW(
-                None,
-                windows::core::w!("Failed to initialize PauseCat. Please check the logs."),
-                windows::core::w!("PauseCat Error"),
-                MB_OK | MB_ICONERROR,
-            );
-        }
         return Err(e);
     }
 
@@ -230,7 +212,6 @@ fn main() -> windows::core::Result<()> {
         while GetMessageW(&mut msg, None, 0, 0).into() {
             let _ = TranslateMessage(&msg);
             DispatchMessageW(&msg);
-
             app.drain_events();
         }
     }

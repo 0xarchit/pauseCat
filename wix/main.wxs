@@ -1,4 +1,5 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" 
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="PauseCat" 
            Manufacturer="0xarchit" 
            Version="1.0.0" 
@@ -6,9 +7,7 @@
            Language="1033">
     
     <SummaryInformation Keywords="Installer" Description="PauseCat Break Reminder" />
-
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
-    
     <Media Id="1" Cabinet="pausecat.cab" EmbedCab="yes" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
@@ -29,6 +28,7 @@
             <File Id="AssetSettings" Source="assets\settings.html" />
             <File Id="AssetDefaultVideo" Source="assets\default.webm" />
             <File Id="AssetIcon" Source="assets\pauseCat.ico" />
+            <File Id="AssetLicense" Source="assets\LICENSE.rtf" />
           </Component>
         </Directory>
       </Directory>
@@ -37,26 +37,23 @@
     <StandardDirectory Id="ProgramMenuFolder">
       <Directory Id="ProgramMenuDir" Name="PauseCat" />
     </StandardDirectory>
-
     <StandardDirectory Id="DesktopFolder" />
 
     <Feature Id="MainFeature" Title="PauseCat" Level="1">
       <ComponentRef Id="MainExecutable" />
       <ComponentRef Id="AssetFiles" />
-      <Component Id="CleanupMain" Directory="ProgramMenuDir" Guid="b4c2d7e9-f5a3-4c45-9d8b-ae3f2c1d4e5f">
+      <Component Id="CleanupRegistry" Directory="ProgramMenuDir" Guid="b4c2d7e9-f5a3-4c45-9d8b-ae3f2c1d4e5f">
         <RemoveFolder Id="ProgramMenuDir" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\0xarchit\PauseCat" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </Feature>
 
-    <!-- Professional SaaS UI with Post-Install Launch -->
     <WixVariable Id="WixUILicenseRtf" Value="assets\LICENSE.rtf" />
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
     
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch PauseCat now" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
     <Property Id="WixShellExecTarget" Value="[#PauseCatEXE]" />
-    
     <CustomAction Id="LaunchApplication" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec" Impersonate="yes" />
 
     <UI>

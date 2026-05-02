@@ -67,7 +67,6 @@ impl TrayIcon {
             };
             
             Self::copy_tip(&mut nid.szTip, "PauseCat");
-
             let _ = Shell_NotifyIconW(NIM_ADD, &nid);
 
             Ok(Self { hwnd })
@@ -86,7 +85,6 @@ impl TrayIcon {
             };
             let tip = if paused { "PauseCat (Paused)" } else { "PauseCat" };
             Self::copy_tip(&mut nid.szTip, tip);
-
             let _ = Shell_NotifyIconW(NIM_MODIFY, &nid);
         }
     }
