@@ -33,7 +33,7 @@ impl TrayIcon {
             };
 
             if RegisterClassExW(&wnd_class) == 0 {
-                return Err(Error::from_win32());
+                return Err(Error::from_hresult(HRESULT(-1))); 
             }
 
             let hwnd = CreateWindowExW(
@@ -42,12 +42,8 @@ impl TrayIcon {
                 w!("PauseCat Tray"),
                 WS_OVERLAPPEDWINDOW,
                 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-                None, None, instance, Some(Box::into_raw(Box::new(sender)) as *mut _)
-            );
-
-            if hwnd.0 == 0 {
-                return Err(Error::from_win32());
-            }
+                None, None, Some(instance), Some(Box::into_raw(Box::new(sender)) as *mut _)
+            )?;
 
             let mut nid = NOTIFYICONDATAW {
                 cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
@@ -61,7 +57,7 @@ impl TrayIcon {
             
             Self::copy_tip(&mut nid.szTip, "PauseCat");
 
-            Shell_NotifyIconW(NIM_ADD, &nid);
+            let _ = Shell_NotifyIconW(NIM_ADD, &nid);
 
             Ok(Self { hwnd })
         }
@@ -79,7 +75,7 @@ impl TrayIcon {
             let tip = if paused { "PauseCat (Paused)" } else { "PauseCat" };
             Self::copy_tip(&mut nid.szTip, tip);
 
-            Shell_NotifyIconW(NIM_MODIFY, &nid);
+            let _ = Shell_NotifyIconW(NIM_MODIFY, &nid);
         }
     }
 
@@ -100,7 +96,7 @@ impl Drop for TrayIcon {
                 uID: ID_TRAY_ICON,
                 ..Default::default()
             };
-            Shell_NotifyIconW(NIM_DELETE, &nid);
+            let _ = Shell_NotifyIconW(NIM_DELETE, &nid);
             let _ = DestroyWindow(self.hwnd);
         }
     }
@@ -146,7 +142,10 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
 }
 
 unsafe fn show_context_menu(hwnd: HWND) {
-    let menu = CreatePopupMenu().unwrap();
+    let menu = match CreatePopupMenu() {
+        Ok(m) => m,
+        Err(_) => return,
+    };
     
     let _ = AppendMenuW(menu, MF_STRING, ID_MENU_PAUSE, w!("Pause / Resume"));
     let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
@@ -156,8 +155,8 @@ unsafe fn show_context_menu(hwnd: HWND) {
     let mut pos = POINT::default();
     let _ = GetCursorPos(&mut pos);
 
-    SetForegroundWindow(hwnd);
-    let _ = TrackPopupMenu(menu, TPM_RIGHTBUTTON, pos.x, pos.y, 0, hwnd, None);
-    let _ = PostMessageW(hwnd, WM_NULL, WPARAM(0), LPARAM(0));
+    let _ = SetForegroundWindow(hwnd);
+    let _ = TrackPopupMenu(menu, TPM_RIGHTBUTTON, pos.x, pos.y, Some(0), hwnd, None);
+    let _ = PostMessageW(Some(hwnd), WM_NULL, WPARAM(0), LPARAM(0));
     let _ = DestroyMenu(menu);
 }
