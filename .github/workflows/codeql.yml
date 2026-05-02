@@ -12,6 +12,9 @@ jobs:
   detect-changes:
     name: Detect Changed Languages
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
     outputs:
       languages: ${{ steps.set-languages.outputs.languages }}
     steps:
