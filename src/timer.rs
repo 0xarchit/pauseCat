@@ -22,13 +22,33 @@ pub fn run_optimized(
     let mut is_breaking = false;
     let mut pre_capture_triggered = false;
     
+    let mut current_work_secs;
+    let mut current_break_secs;
+    
     {
         let s = settings.read().unwrap();
-        time_remaining = Duration::from_secs(s.work_duration_secs as u64);
+        current_work_secs = s.work_duration_secs;
+        current_break_secs = s.break_duration_secs;
+        time_remaining = Duration::from_secs(current_work_secs as u64);
     }
 
     loop {
         thread::sleep(Duration::from_millis(500));
+        
+        {
+            let s = settings.read().unwrap();
+            if s.work_duration_secs != current_work_secs || s.break_duration_secs != current_break_secs {
+                current_work_secs = s.work_duration_secs;
+                current_break_secs = s.break_duration_secs;
+                
+                if !is_breaking {
+                    time_remaining = Duration::from_secs(current_work_secs as u64);
+                    pre_capture_triggered = false;
+                    last_tick = Instant::now();
+                    log::info!("Timer reactively updated to {}m work / {}m break.", current_work_secs / 60, current_break_secs / 60);
+                }
+            }
+        }
         
         if paused.load(Ordering::Relaxed) {
             last_tick = Instant::now();
@@ -41,7 +61,6 @@ pub fn run_optimized(
         if time_remaining > elapsed {
             time_remaining -= elapsed;
             
-            // Optimization: Pre-capture background before break starts
             if !is_breaking && time_remaining.as_secs() <= 5 && !pre_capture_triggered {
                 pre_capture_triggered = true;
                 let bg_clone = pre_captured_bg.clone();
@@ -55,14 +74,12 @@ pub fn run_optimized(
             }
         } else {
             if !is_breaking {
-                // Work ended -> Start break
                 is_breaking = true;
                 let _ = event_tx.send(AppEvent::ShowOverlay);
                 
                 let s = settings.read().unwrap();
                 time_remaining = Duration::from_secs(s.break_duration_secs as u64);
             } else {
-                // Break ended -> Resume work
                 is_breaking = false;
                 pre_capture_triggered = false;
                 let _ = event_tx.send(AppEvent::HideOverlay);
