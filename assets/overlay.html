@@ -6,144 +6,133 @@
     <title>PauseCat Break</title>
     <style>
         :root {
+            --bubble-size: 580px;
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
             --text-color: #ffffff;
-            --accent-color: #6366f1;
         }
 
         body {
             margin: 0;
-            padding: 0;
+            padding: 60px; /* Padding for top-left position */
             overflow: hidden;
             background: transparent;
-            font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             color: var(--text-color);
             display: flex;
-            justify-content: center;
-            align-items: center;
+            justify-content: flex-start; /* Move to left */
+            align-items: flex-start;    /* Move to top */
             height: 100vh;
+            box-sizing: border-box;
         }
 
-        .overlay-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 40px;
-            text-align: center;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            max-width: 500px;
-            width: 90%;
-            animation: cardSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .media-container {
-            width: 100%;
-            height: 200px;
-            margin-bottom: 30px;
-            border-radius: 16px;
+        #bg-media-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
             overflow: hidden;
+            background: black; /* Prevent flash */
+        }
+
+        #bg-image, #bg-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.7);
+            display: block;
+        }
+
+        .floating-bubble {
+            width: var(--bubble-size);
+            height: var(--bubble-size);
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: rgba(0, 0, 0, 0.1);
-        }
-
-        #display-media {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0 0 10px 0;
-            letter-spacing: -0.02em;
-        }
-
-        p {
-            font-size: 1.1rem;
-            opacity: 0.8;
-            margin: 0 0 30px 0;
+            box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.6);
+            text-align: center;
+            animation: bubbleFloat 8s ease-in-out infinite, fadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
         }
 
         .timer-display {
-            font-size: 4rem;
+            font-size: 7.5rem;
             font-weight: 800;
             font-variant-numeric: tabular-nums;
-            margin-bottom: 30px;
-            font-family: 'Segoe UI Mono', monospace;
-            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.5) 100%);
+            letter-spacing: -0.04em;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            margin-bottom: 5px;
+            background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.7) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
+        .status-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
         .actions {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
+            position: absolute;
+            bottom: 60px;
         }
 
         button {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
-            padding: 12px 32px;
-            font-size: 1rem;
+            padding: 12px 36px;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            border-radius: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(4px);
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         button:hover {
             background: white;
-            color: #000;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            color: black;
+            transform: scale(1.05);
         }
 
-        button.primary {
-            background: var(--accent-color);
-            border-color: transparent;
+        @keyframes bubbleFloat {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(10px, -15px); }
+            66% { transform: translate(-10px, 5px); }
         }
 
-        button.primary:hover {
-            background: #4f46e5;
-            color: white;
-        }
-
-        @keyframes cardSlideIn {
-            from { opacity: 0; transform: translateY(40px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div class="overlay-card">
-        <div class="media-container">
-            <!-- Dynamically populated -->
-            <div id="media-placeholder">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
-                    <path d="M12 8v4l3 2"/>
-                </svg>
-            </div>
-            <img id="display-image" class="hidden">
-            <video id="display-video" class="hidden" autoplay loop muted></video>
-        </div>
+    <div id="bg-media-container">
+        <img id="bg-image" class="hidden">
+        <video id="bg-video" class="hidden" autoplay loop muted playsinline></video>
+    </div>
 
-        <h1 id="title">Time to Rest</h1>
-        <p id="subtitle">Give your eyes a moment of peace.</p>
-        
+    <div class="floating-bubble">
+        <div class="status-text" id="status">Breathe In...</div>
         <div class="timer-display" id="timer">--:--</div>
-
+        
         <div class="actions">
             <button id="skip-btn" onclick="dismiss()">Skip Break</button>
         </div>
@@ -161,9 +150,6 @@
             document.getElementById('timer').innerText = 
                 `${mins}:${secs.toString().padStart(2, '0')}`;
             if (seconds > 0) seconds--;
-            else {
-                // Potential auto-close logic here
-            }
         }
 
         window.chrome.webview.addEventListener('message', event => {
@@ -171,28 +157,31 @@
                 seconds = event.data.duration;
                 if (event.data.mode === "hard") {
                     document.getElementById('skip-btn').classList.add('hidden');
-                    document.getElementById('title').innerText = "Focus on resting";
+                    document.getElementById('status').innerText = "Focus on resting";
                 }
                 
                 if (event.data.mediaPath) {
-                    const mediaContainer = document.getElementById('media-placeholder');
-                    const img = document.getElementById('display-image');
-                    const video = document.getElementById('display-video');
+                    const img = document.getElementById('bg-image');
+                    const video = document.getElementById('bg-video');
                     
                     const ext = event.data.mediaPath.split('.').pop().toLowerCase();
                     if (['mp4', 'webm', 'ogg'].includes(ext)) {
                         video.src = event.data.mediaPath;
                         video.classList.remove('hidden');
-                        mediaContainer.classList.add('hidden');
+                        video.play().catch(e => console.error("Autoplay failed:", e));
                     } else {
                         img.src = event.data.mediaPath;
                         img.classList.remove('hidden');
-                        mediaContainer.classList.add('hidden');
                     }
                 }
                 updateTimer();
             }
         });
+
+        // Inform Rust that we are ready to receive the init data
+        window.onload = () => {
+            window.chrome.webview.postMessage({ action: "ready" });
+        };
 
         setInterval(updateTimer, 1000);
     </script>

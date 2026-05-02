@@ -38,7 +38,7 @@ impl Default for Settings {
             break_duration_secs: 300,
             mode: BreakMode::Soft,
             autostart: true,
-            overlay_animation: "cat.webp".to_string(),
+            overlay_animation: "default.webm".to_string(),
         }
     }
 }

@@ -1,9 +1,12 @@
+#![windows_subsystem = "windows"]
+
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::thread;
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::Win32::System::Com::*;
+use windows::Win32::Foundation::*;
 use pausecat::settings::Settings;
 use pausecat::tray::TrayIcon;
 use pausecat::events::AppEvent;
@@ -22,6 +25,7 @@ struct App {
     tray: Option<TrayIcon>,
     reminder_overlay: Option<OverlayWindow>,
     settings_window: Option<SettingsWindow>,
+    was_media_playing: bool,
 }
 
 impl App {
@@ -38,6 +42,7 @@ impl App {
             tray: None,
             reminder_overlay: None,
             settings_window: None,
+            was_media_playing: false,
         }
     }
 
@@ -46,10 +51,10 @@ impl App {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
 
-        // 1. Initialize Tray
+        let _ = self.settings.read().unwrap().update_autostart();
+
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
 
-        // 2. Start Timer Engine
         let settings_clone = self.settings.clone();
         let event_tx_clone = self.event_tx.clone();
         let paused_clone = self.paused.clone();
@@ -65,10 +70,14 @@ impl App {
         match event {
             AppEvent::ShowOverlay => {
                 if self.reminder_overlay.is_none() {
+                    self.pause_media();
                     self.show_overlay();
                 }
             }
             AppEvent::HideOverlay | AppEvent::UserDismissed => {
+                if self.reminder_overlay.is_some() {
+                    self.resume_media();
+                }
                 self.reminder_overlay = None;
                 self.settings_window = None;
             }
@@ -91,7 +100,6 @@ impl App {
                 let mut settings = self.settings.write().unwrap();
                 *settings = new_settings;
                 let _ = settings.save();
-                log::info!("Settings updated and saved.");
             }
             AppEvent::Quit => {
                 unsafe { PostQuitMessage(0) };
@@ -112,6 +120,22 @@ impl App {
         }
     }
 
+    fn pause_media(&mut self) {
+        unsafe {
+            let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(47 << 16)));
+        }
+        self.was_media_playing = true; 
+    }
+
+    fn resume_media(&mut self) {
+        if self.was_media_playing {
+            unsafe {
+                let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(46 << 16)));
+            }
+            self.was_media_playing = false;
+        }
+    }
+
     fn drain_events(&mut self) {
         while let Ok(event) = self.event_rx.try_recv() {
             self.handle_event(event);
@@ -122,7 +146,7 @@ impl App {
 fn setup_logging() -> windows::core::Result<()> {
     let mut path = dirs::config_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
     path.push("PauseCat");
-    std::fs::create_dir_all(&path).map_err(|e| windows::core::Error::from_hresult(windows::core::HRESULT(e.raw_os_error().unwrap_or(-1) as i32)))?;
+    let _ = std::fs::create_dir_all(&path);
     path.push("app.log");
     
     let file = std::fs::OpenOptions::new()
@@ -153,15 +177,22 @@ fn check_webview2() -> windows::core::Result<bool> {
 fn main() -> windows::core::Result<()> {
     let _ = setup_logging();
 
+    unsafe {
+        use windows::Win32::System::Threading::CreateMutexW;
+        let _handle = CreateMutexW(None, true, windows::core::w!("Global\\PauseCatSingleInstanceMutex"));
+        if GetLastError() == ERROR_ALREADY_EXISTS {
+            return Ok(());
+        }
+    }
+
     match check_webview2() {
-        Ok(true) => log::info!("WebView2 runtime found."),
+        Ok(true) => log::info!("WebView2 found."),
         _ => {
-            log::error!("WebView2 runtime not found.");
             unsafe {
                 MessageBoxW(
                     None,
-                    windows::core::w!("PauseCat requires the Microsoft Edge WebView2 Runtime to be installed. Please install it and try again."),
-                    windows::core::w!("PauseCat Error"),
+                    windows::core::w!("PauseCat requires WebView2 Runtime."),
+                    windows::core::w!("Error"),
                     MB_OK | MB_ICONERROR,
                 );
             }
@@ -170,7 +201,9 @@ fn main() -> windows::core::Result<()> {
     }
 
     let mut app = App::new();
-    app.init()?;
+    if let Err(e) = app.init() {
+        return Err(e);
+    }
 
     unsafe {
         let _ = SetTimer(None, TIMER_ID_CHANNEL, 100, None);
@@ -179,7 +212,6 @@ fn main() -> windows::core::Result<()> {
         while GetMessageW(&mut msg, None, 0, 0).into() {
             let _ = TranslateMessage(&msg);
             DispatchMessageW(&msg);
-
             app.drain_events();
         }
     }

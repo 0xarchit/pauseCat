@@ -14,6 +14,8 @@ const ID_MENU_PAUSE: usize = 1001;
 const ID_MENU_SETTINGS: usize = 1002;
 const ID_MENU_EXIT: usize = 1003;
 
+static mut IS_PAUSED: bool = false;
+
 pub struct TrayIcon {
     hwnd: HWND,
 }
@@ -32,9 +34,7 @@ impl TrayIcon {
                 ..Default::default()
             };
 
-            if RegisterClassExW(&wnd_class) == 0 {
-                return Err(Error::from_hresult(HRESULT(-1))); 
-            }
+            RegisterClassExW(&wnd_class);
 
             let hwnd = CreateWindowExW(
                 WINDOW_EX_STYLE::default(),
@@ -45,18 +45,28 @@ impl TrayIcon {
                 None, None, Some(instance), Some(Box::into_raw(Box::new(sender)) as *mut _)
             )?;
 
+            let h_icon = match LoadImageW(
+                Some(instance),
+                PCWSTR(1 as *const u16),
+                IMAGE_ICON,
+                0, 0,
+                LR_DEFAULTSIZE | LR_SHARED
+            ) {
+                Ok(handle) => HICON(handle.0),
+                Err(_) => LoadIconW(None, IDI_APPLICATION)?,
+            };
+
             let mut nid = NOTIFYICONDATAW {
                 cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
                 hWnd: hwnd,
                 uID: ID_TRAY_ICON,
                 uFlags: NIF_ICON | NIF_MESSAGE | NIF_TIP,
                 uCallbackMessage: WM_TRAY_ICON,
-                hIcon: LoadIconW(None, IDI_APPLICATION)?,
+                hIcon: h_icon,
                 ..Default::default()
             };
             
             Self::copy_tip(&mut nid.szTip, "PauseCat");
-
             let _ = Shell_NotifyIconW(NIM_ADD, &nid);
 
             Ok(Self { hwnd })
@@ -65,6 +75,7 @@ impl TrayIcon {
 
     pub fn set_paused(&self, paused: bool) {
         unsafe {
+            IS_PAUSED = paused;
             let mut nid = NOTIFYICONDATAW {
                 cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
                 hWnd: self.hwnd,
@@ -74,7 +85,6 @@ impl TrayIcon {
             };
             let tip = if paused { "PauseCat (Paused)" } else { "PauseCat" };
             Self::copy_tip(&mut nid.szTip, tip);
-
             let _ = Shell_NotifyIconW(NIM_MODIFY, &nid);
         }
     }
@@ -147,7 +157,17 @@ unsafe fn show_context_menu(hwnd: HWND) {
         Err(_) => return,
     };
     
-    let _ = AppendMenuW(menu, MF_STRING, ID_MENU_PAUSE, w!("Pause / Resume"));
+    let pause_text = if IS_PAUSED { "Resume Timer" } else { "Pause Timer" };
+    let mii = MENUITEMINFOW {
+        cbSize: std::mem::size_of::<MENUITEMINFOW>() as u32,
+        fMask: MIIM_STRING | MIIM_ID | MIIM_STATE,
+        wID: ID_MENU_PAUSE as u32,
+        dwTypeData: PWSTR(HSTRING::from(pause_text).as_ptr() as *mut _),
+        fState: if IS_PAUSED { MFS_CHECKED } else { MFS_ENABLED },
+        ..Default::default()
+    };
+    let _ = InsertMenuItemW(menu, 0, true, &mii);
+    
     let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
     let _ = AppendMenuW(menu, MF_STRING, ID_MENU_SETTINGS, w!("Settings..."));
     let _ = AppendMenuW(menu, MF_STRING, ID_MENU_EXIT, w!("Exit"));

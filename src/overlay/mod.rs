@@ -18,7 +18,7 @@ static mut OVERLAY_SENDER: Option<Sender<AppEvent>> = None;
 static mut KEYBOARD_HOOK: HHOOK = HHOOK(std::ptr::null_mut());
 
 pub struct OverlayWindow {
-    hwnd: HWND,
+    pub hwnd: HWND,
 }
 
 impl OverlayWindow {
@@ -52,7 +52,7 @@ impl OverlayWindow {
             let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), 0, LWA_ALPHA);
             
             // Initialize WebView2 layer with settings
-            webview::WebViewLayer::init(hwnd, sender, settings)?;
+            webview::init(hwnd, sender, settings)?;
 
             // Set up emergency exit hook
             KEYBOARD_HOOK = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), Some(instance), 0)?;
@@ -139,6 +139,10 @@ unsafe extern "system" fn overlay_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM,
             let _ = EndPaint(hwnd, &ps);
             LRESULT(0)
         }
+        WM_SIZE => {
+            webview::resize_controller(hwnd);
+            LRESULT(0)
+        }
         WM_KEYDOWN => {
             if wparam.0 as u32 == VK_ESCAPE.0 as u32 {
                 if let Some(ref sender) = OVERLAY_SENDER {
@@ -152,6 +156,7 @@ unsafe extern "system" fn overlay_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM,
             if !blur_data_ptr.is_null() {
                 drop(Box::from_raw(blur_data_ptr));
             }
+            webview::unregister_controller(hwnd);
             LRESULT(0)
         }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),

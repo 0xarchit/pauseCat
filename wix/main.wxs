@@ -1,0 +1,66 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" 
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="PauseCat" 
+           Manufacturer="0xarchit" 
+           Version="1.0.0" 
+           UpgradeCode="570a2736-2391-4c12-8e3d-74d32098d57d" 
+           Language="1033">
+    
+    <SummaryInformation Keywords="Installer" Description="PauseCat Break Reminder" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <Media Id="1" Cabinet="pausecat.cab" EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="PauseCat">
+        <Component Id="MainExecutable" Guid="a3b1c6d8-e4f2-4b34-8c7a-9d2e1b0c3d4f">
+          <File Id="PauseCatEXE" Source="target\release\pausecat.exe" KeyPath="yes">
+            <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuDir" Name="PauseCat"
+                      WorkingDirectory="INSTALLFOLDER" Icon="pauseCat.ico" Advertise="yes" />
+            <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="PauseCat"
+                      WorkingDirectory="INSTALLFOLDER" Icon="pauseCat.ico" Advertise="yes" />
+          </File>
+        </Component>
+
+        <Directory Id="AssetsFolder" Name="assets">
+          <Component Id="AssetFiles" Guid="c5d3e8a9-0b12-4d56-9f7c-1e2f3a4b5c6d">
+            <File Id="AssetManifest" Source="assets\app.manifest" />
+            <File Id="AssetOverlay" Source="assets\overlay.html" />
+            <File Id="AssetSettings" Source="assets\settings.html" />
+            <File Id="AssetDefaultVideo" Source="assets\default.webm" />
+            <File Id="AssetIcon" Source="assets\pauseCat.ico" />
+            <File Id="AssetLicense" Source="assets\LICENSE.rtf" />
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuDir" Name="PauseCat" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="MainFeature" Title="PauseCat" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="AssetFiles" />
+      <Component Id="CleanupRegistry" Directory="ProgramMenuDir" Guid="b4c2d7e9-f5a3-4c45-9d8b-ae3f2c1d4e5f">
+        <RemoveFolder Id="ProgramMenuDir" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\0xarchit\PauseCat" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </Feature>
+
+    <WixVariable Id="WixUILicenseRtf" Value="assets\LICENSE.rtf" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch PauseCat now" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#PauseCatEXE]" />
+    <CustomAction Id="LaunchApplication" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec" Impersonate="yes" />
+
+    <UI>
+        <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
+    </UI>
+
+    <Icon Id="pauseCat.ico" SourceFile="assets\pauseCat.ico" />
+    <Property Id="ARPPRODUCTICON" Value="pauseCat.ico" />
+  </Package>
+</Wix>
