@@ -5,124 +5,282 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PauseCat Settings</title>
     <style>
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+        :root {
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --text-secondary: #4b5563;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --border: #e5e7eb;
         }
+
+        body {
+            font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
         .header {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            margin-bottom: 32px;
         }
+
         .header h1 {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
             margin: 0;
-            color: #4b5563;
+            letter-spacing: -0.01em;
         }
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
+
+        .section-title {
             font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
         }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .setting-label {
+            font-size: 0.9375rem;
+            font-weight: 500;
+        }
+
+        .setting-description {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .control {
+            min-width: 120px;
+        }
+
         input[type="number"], select {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            box-sizing: border-box;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
         }
-        .checkbox-group {
+
+        input[type="number"]:focus, select:focus {
+            border-color: var(--accent);
+        }
+
+        .media-preview {
+            width: 100%;
+            height: 120px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            margin-top: 12px;
             display: flex;
+            justify-content: center;
             align-items: center;
-            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
         }
+
+        .media-preview:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .media-preview img, .media-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         .actions {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 12px;
+            margin-top: 32px;
         }
+
         button {
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 8px 20px;
+            border-radius: 6px;
             font-size: 0.875rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
+
         .btn-primary {
-            background-color: #3b82f6;
+            background-color: var(--accent);
             color: white;
             border: none;
         }
-        .btn-primary:hover { background-color: #2563eb; }
+
+        .btn-primary:hover { background-color: var(--accent-hover); }
+
         .btn-secondary {
             background-color: white;
-            color: #374151;
-            border: 1px solid #d1d5db;
+            color: var(--text-main);
+            border: 1px solid var(--border);
         }
+
         .btn-secondary:hover { background-color: #f9fafb; }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #d1d5db;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
     </style>
 </head>
 <body>
     <div class="header">
-        <span style="font-size: 2rem;">🐾</span>
+        <img src="pauseCat.ico" width="24" height="24" style="border-radius: 4px;">
         <h1>PauseCat Settings</h1>
     </div>
 
+    <div class="section-title">Schedule</div>
     <div class="card">
-        <div class="group">
-            <label for="work_duration">Work Duration (minutes)</label>
-            <input type="number" id="work_duration" min="5" max="240" step="5">
+        <div class="setting-row">
+            <div class="setting-info">
+                <span class="setting-label">Work Duration</span>
+                <span class="setting-description">Minutes before a break starts</span>
+            </div>
+            <div class="control">
+                <input type="number" id="work_duration" min="5" max="240" step="5">
+            </div>
         </div>
-
-        <div class="group">
-            <label for="break_duration">Break Duration (minutes)</label>
-            <input type="number" id="break_duration" min="1" max="30" step="1">
-        </div>
-
-        <div class="group">
-            <label for="mode">Break Mode</label>
-            <select id="mode">
-                <option value="soft">Soft (Can skip)</option>
-                <option value="hard">Hard (Immersive)</option>
-            </select>
-        </div>
-
-        <div class="group checkbox-group">
-            <input type="checkbox" id="autostart">
-            <label for="autostart">Launch on Windows startup</label>
-        </div>
-
-        <div class="actions">
-            <button class="btn-secondary" onclick="window.chrome.webview.postMessage({action: 'close'})">Cancel</button>
-            <button class="btn-primary" onclick="save()">Save Changes</button>
+        <div class="setting-row">
+            <div class="setting-info">
+                <span class="setting-label">Break Duration</span>
+                <span class="setting-description">Minutes each break lasts</span>
+            </div>
+            <div class="control">
+                <input type="number" id="break_duration" min="1" max="30" step="1">
+            </div>
         </div>
     </div>
 
+    <div class="section-title">Experience</div>
+    <div class="card">
+        <div class="setting-row">
+            <div class="setting-info">
+                <span class="setting-label">Break Mode</span>
+                <span class="setting-description">Hard mode prevents skipping</span>
+            </div>
+            <div class="control">
+                <select id="mode">
+                    <option value="soft">Soft</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+        </div>
+        <div class="setting-row">
+            <div class="setting-info">
+                <span class="setting-label">Custom Media</span>
+                <span class="setting-description">Image, GIF, or Video for breaks</span>
+            </div>
+        </div>
+        <div class="media-preview" id="media-trigger" onclick="selectMedia()">
+            <div id="media-empty">Click to select file...</div>
+            <img id="preview-img" class="hidden">
+            <video id="preview-video" class="hidden" muted loop></video>
+        </div>
+    </div>
+
+    <div class="section-title">System</div>
+    <div class="card">
+        <div class="setting-row">
+            <div class="setting-info">
+                <span class="setting-label">Auto-start</span>
+                <span class="setting-description">Launch when Windows starts</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="autostart">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn-secondary" onclick="window.chrome.webview.postMessage({action: 'close'})">Cancel</button>
+        <button class="btn-primary" onclick="save()">Apply Settings</button>
+    </div>
+
     <script>
+        let currentMediaPath = "";
+
+        function selectMedia() {
+            window.chrome.webview.postMessage({ action: "select_media" });
+        }
+
         function save() {
             const settings = {
                 work_duration_secs: document.getElementById('work_duration').value * 60,
                 break_duration_secs: document.getElementById('break_duration').value * 60,
                 mode: document.getElementById('mode').value,
                 autostart: document.getElementById('autostart').checked,
-                overlay_animation: "cat.webp"
+                overlay_animation: currentMediaPath || "cat.webp"
             };
             window.chrome.webview.postMessage({ action: "save", settings: settings });
         }
@@ -134,8 +292,34 @@
                 document.getElementById('break_duration').value = s.break_duration_secs / 60;
                 document.getElementById('mode').value = s.mode;
                 document.getElementById('autostart').checked = s.autostart;
+                if (s.overlay_animation && s.overlay_animation !== "cat.webp") {
+                    updatePreview(s.overlay_animation);
+                }
+            } else if (event.data.action === "media_selected") {
+                updatePreview(event.data.path);
             }
         });
+
+        function updatePreview(path) {
+            currentMediaPath = path;
+            const empty = document.getElementById('media-empty');
+            const img = document.getElementById('preview-img');
+            const video = document.getElementById('preview-video');
+            
+            empty.classList.add('hidden');
+            img.classList.add('hidden');
+            video.classList.add('hidden');
+
+            const ext = path.split('.').pop().toLowerCase();
+            if (['mp4', 'webm', 'ogg'].includes(ext)) {
+                video.src = path;
+                video.classList.remove('hidden');
+                video.play();
+            } else {
+                img.src = path;
+                img.classList.remove('hidden');
+            }
+        }
     </script>
 </body>
 </html>

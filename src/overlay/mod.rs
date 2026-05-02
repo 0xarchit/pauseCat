@@ -8,6 +8,7 @@ use windows::{
 };
 use std::sync::mpsc::Sender;
 use crate::events::AppEvent;
+use crate::settings::Settings;
 
 pub mod capture;
 pub mod blur;
@@ -21,7 +22,7 @@ pub struct OverlayWindow {
 }
 
 impl OverlayWindow {
-    pub fn new(sender: Sender<AppEvent>, width: i32, height: i32, blur_data: Vec<u8>) -> Result<Self> {
+    pub fn new(sender: Sender<AppEvent>, width: i32, height: i32, blur_data: Vec<u8>, settings: Settings) -> Result<Self> {
         unsafe {
             OVERLAY_SENDER = Some(sender.clone());
             
@@ -50,8 +51,8 @@ impl OverlayWindow {
 
             let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), 0, LWA_ALPHA);
             
-            // Initialize WebView2 layer
-            webview::WebViewLayer::init(hwnd, sender)?;
+            // Initialize WebView2 layer with settings
+            webview::WebViewLayer::init(hwnd, sender, settings)?;
 
             // Set up emergency exit hook
             KEYBOARD_HOOK = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), Some(instance), 0)?;
@@ -65,7 +66,6 @@ impl OverlayWindow {
             for alpha in (0..=255).step_by(15) {
                 let _ = SetLayeredWindowAttributes(self.hwnd, COLORREF(0), alpha as u8, LWA_ALPHA);
                 
-                // Process pending messages to keep UI responsive and allow painting
                 let mut msg = MSG::default();
                 while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).into() {
                     let _ = TranslateMessage(&msg);
@@ -99,7 +99,7 @@ unsafe extern "system" fn overlay_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM,
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, blur_data_ptr as isize);
             LRESULT(0)
         }
-        WM_ERASEBKGND => LRESULT(1), // Handle in WM_PAINT
+        WM_ERASEBKGND => LRESULT(1), 
         WM_PAINT => {
             let mut ps = PAINTSTRUCT::default();
             let hdc = BeginPaint(hwnd, &mut ps);

@@ -5,78 +5,148 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PauseCat Break</title>
     <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-color: #ffffff;
+            --accent-color: #6366f1;
+        }
+
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
             background: transparent;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: white;
+            font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: var(--text-color);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
 
-        .container {
+        .overlay-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
             text-align: center;
-            animation: fadeIn 1s ease-out;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            max-width: 500px;
+            width: 90%;
+            animation: cardSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .animation {
-            width: 300px;
-            height: 300px;
-            margin-bottom: 20px;
+        .media-container {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 30px;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        #display-media {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
         }
 
         h1 {
-            font-size: 3rem;
-            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            letter-spacing: -0.02em;
         }
 
-        #timer {
-            font-size: 2rem;
-            margin: 20px 0;
-            font-weight: 300;
+        p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin: 0 0 30px 0;
+        }
+
+        .timer-display {
+            font-size: 4rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 30px;
+            font-family: 'Segoe UI Mono', monospace;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.5) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
         }
 
         button {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid white;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
             color: white;
-            padding: 10px 30px;
-            font-size: 1.2rem;
+            padding: 12px 32px;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            border-radius: 30px;
-            transition: all 0.2s;
-            margin-top: 20px;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(4px);
         }
 
         button:hover {
             background: white;
-            color: black;
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        button.primary {
+            background: var(--accent-color);
+            border-color: transparent;
         }
+
+        button.primary:hover {
+            background: #4f46e5;
+            color: white;
+        }
+
+        @keyframes cardSlideIn {
+            from { opacity: 0; transform: translateY(40px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Placeholder for cat animation -->
-        <div class="animation">
-            <svg viewBox="0 0 100 100" width="100%" height="100%">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="white" stroke-width="2" stroke-dasharray="10 5" />
-                <text x="50" y="55" font-size="30" text-anchor="middle" fill="white">🐾</text>
-            </svg>
+    <div class="overlay-card">
+        <div class="media-container">
+            <!-- Dynamically populated -->
+            <div id="media-placeholder">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+                    <path d="M12 8v4l3 2"/>
+                </svg>
+            </div>
+            <img id="display-image" class="hidden">
+            <video id="display-video" class="hidden" autoplay loop muted></video>
         </div>
-        <h1>Take a break</h1>
-        <div id="timer">--:--</div>
-        <button onclick="dismiss()">Skip</button>
+
+        <h1 id="title">Time to Rest</h1>
+        <p id="subtitle">Give your eyes a moment of peace.</p>
+        
+        <div class="timer-display" id="timer">--:--</div>
+
+        <div class="actions">
+            <button id="skip-btn" onclick="dismiss()">Skip Break</button>
+        </div>
     </div>
 
     <script>
@@ -84,17 +154,47 @@
             window.chrome.webview.postMessage({ action: "dismiss" });
         }
 
-        // Basic timer logic
-        let seconds = 300; // Default 5 mins
+        let seconds = 300;
         function updateTimer() {
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             document.getElementById('timer').innerText = 
                 `${mins}:${secs.toString().padStart(2, '0')}`;
             if (seconds > 0) seconds--;
+            else {
+                // Potential auto-close logic here
+            }
         }
+
+        window.chrome.webview.addEventListener('message', event => {
+            if (event.data.action === "init") {
+                seconds = event.data.duration;
+                if (event.data.mode === "hard") {
+                    document.getElementById('skip-btn').classList.add('hidden');
+                    document.getElementById('title').innerText = "Focus on resting";
+                }
+                
+                if (event.data.mediaPath) {
+                    const mediaContainer = document.getElementById('media-placeholder');
+                    const img = document.getElementById('display-image');
+                    const video = document.getElementById('display-video');
+                    
+                    const ext = event.data.mediaPath.split('.').pop().toLowerCase();
+                    if (['mp4', 'webm', 'ogg'].includes(ext)) {
+                        video.src = event.data.mediaPath;
+                        video.classList.remove('hidden');
+                        mediaContainer.classList.add('hidden');
+                    } else {
+                        img.src = event.data.mediaPath;
+                        img.classList.remove('hidden');
+                        mediaContainer.classList.add('hidden');
+                    }
+                }
+                updateTimer();
+            }
+        });
+
         setInterval(updateTimer, 1000);
-        updateTimer();
     </script>
 </body>
 </html>

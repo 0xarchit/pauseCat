@@ -5,6 +5,7 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::Com::*;
 use windows::Win32::System::LibraryLoader::*;
+use windows::Win32::UI::Controls::Dialogs::*;
 use webview2_com::*;
 use webview2_com::Microsoft::Web::WebView2::Win32::*;
 use crate::events::AppEvent;
@@ -37,7 +38,7 @@ impl SettingsWindow {
                 class_name,
                 w!("PauseCat Settings"),
                 WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-                CW_USEDEFAULT, CW_USEDEFAULT, 400, 500,
+                CW_USEDEFAULT, CW_USEDEFAULT, 450, 650,
                 None, None, Some(instance), None
             )?;
 
@@ -75,6 +76,7 @@ impl SettingsWindow {
                                     let _ = webview_settings.SetAreDefaultContextMenusEnabled(false);
 
                                     let sender_clone = sender.clone();
+                                    let webview_clone = webview.clone();
                                     let mut token = 0i64;
                                     let _ = webview.add_WebMessageReceived(
                                         &WebMessageReceivedEventHandler::create(
@@ -92,6 +94,13 @@ impl SettingsWindow {
                                                             }
                                                         } else if json.contains("\"action\":\"close\"") {
                                                             let _ = sender_clone.send(AppEvent::UserDismissed);
+                                                        } else if json.contains("\"action\":\"select_media\"") {
+                                                            if let Some(path) = Self::pick_file() {
+                                                                let path_json = path.replace('\\', "/");
+                                                                let msg = format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path_json);
+                                                                let hmsg = HSTRING::from(msg);
+                                                                let _ = webview_clone.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr()));
+                                                            }
                                                         }
                                                         CoTaskMemFree(Some(message.0 as *const _));
                                                     }
@@ -122,6 +131,25 @@ impl SettingsWindow {
         }
         Ok(())
     }
+
+    fn pick_file() -> Option<String> {
+        unsafe {
+            let mut file_path = [0u16; 260];
+            let mut ofn = OPENFILENAMEW::default();
+            ofn.lStructSize = std::mem::size_of::<OPENFILENAMEW>() as u32;
+            ofn.lpstrFile = PWSTR(file_path.as_mut_ptr());
+            ofn.nMaxFile = 260;
+            ofn.lpstrFilter = w!("Media Files\0*.png;*.jpg;*.jpeg;*.gif;*.mp4;*.webm\0All Files\0*.*\0");
+            ofn.nFilterIndex = 1;
+            ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+            if GetOpenFileNameW(&mut ofn).as_bool() {
+                Some(PWSTR(file_path.as_mut_ptr()).to_string().unwrap_or_default())
+            } else {
+                None
+            }
+        }
+    }
 }
 
 impl Drop for SettingsWindow {
@@ -134,9 +162,7 @@ impl Drop for SettingsWindow {
 
 unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     match msg {
-        WM_DESTROY => {
-            LRESULT(0)
-        }
+        WM_DESTROY => LRESULT(0),
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
     }
 }

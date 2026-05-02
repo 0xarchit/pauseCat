@@ -69,7 +69,6 @@ impl App {
                 }
             }
             AppEvent::HideOverlay | AppEvent::UserDismissed => {
-                // UserDismissed can come from both Overlay and Settings
                 self.reminder_overlay = None;
                 self.settings_window = None;
             }
@@ -92,7 +91,7 @@ impl App {
                 let mut settings = self.settings.write().unwrap();
                 *settings = new_settings;
                 let _ = settings.save();
-                println!("Settings updated and saved.");
+                log::info!("Settings updated and saved.");
             }
             AppEvent::Quit => {
                 unsafe { PostQuitMessage(0) };
@@ -105,7 +104,8 @@ impl App {
         if let Ok(captured) = capture_result {
             let blurred = blur::blur(&captured.data, captured.width as usize, captured.height as usize, 10.0);
             
-            if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), captured.width, captured.height, blurred) {
+            let current_settings = self.settings.read().unwrap().clone();
+            if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), captured.width, captured.height, blurred, current_settings) {
                 overlay.fade_in();
                 self.reminder_overlay = Some(overlay);
             }
@@ -173,7 +173,6 @@ fn main() -> windows::core::Result<()> {
     app.init()?;
 
     unsafe {
-        // Set a Win32 timer to wake up the message loop and check our MPSC channel
         let _ = SetTimer(None, TIMER_ID_CHANNEL, 100, None);
 
         let mut msg = MSG::default();
@@ -181,7 +180,6 @@ fn main() -> windows::core::Result<()> {
             let _ = TranslateMessage(&msg);
             DispatchMessageW(&msg);
 
-            // After every message, and especially on our timer message, check for events
             app.drain_events();
         }
     }

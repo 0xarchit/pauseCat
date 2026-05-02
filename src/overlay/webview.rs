@@ -6,15 +6,15 @@ use windows::Win32::System::Com::*;
 use webview2_com::*;
 use webview2_com::Microsoft::Web::WebView2::Win32::*;
 use crate::events::AppEvent;
+use crate::settings::Settings;
 
 /// Manages the WebView2 instance for the break overlay.
 pub struct WebViewLayer;
 
 impl WebViewLayer {
     /// Starts the asynchronous initialization of WebView2.
-    pub fn init(hwnd: HWND, sender: Sender<AppEvent>) -> windows::core::Result<()> {
+    pub fn init(hwnd: HWND, sender: Sender<AppEvent>, settings: Settings) -> windows::core::Result<()> {
         unsafe {
-            // Ensure COM is initialized for this thread
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
 
             CreateCoreWebView2EnvironmentWithOptions(None, None, None, 
@@ -42,10 +42,10 @@ impl WebViewLayer {
                                     let webview = controller.CoreWebView2()?;
                                     
                                     // 3. Configure settings
-                                    let settings = webview.Settings()?;
-                                    let _ = settings.SetIsWebMessageEnabled(true);
-                                    let _ = settings.SetAreDefaultContextMenusEnabled(false);
-                                    let _ = settings.SetAreDevToolsEnabled(false);
+                                    let webview_settings = webview.Settings()?;
+                                    let _ = webview_settings.SetIsWebMessageEnabled(true);
+                                    let _ = webview_settings.SetAreDefaultContextMenusEnabled(false);
+                                    let _ = webview_settings.SetAreDevToolsEnabled(false);
 
                                     // 4. Handle messages (JS -> Rust)
                                     let sender_clone = sender.clone();
@@ -73,6 +73,21 @@ impl WebViewLayer {
                                     let html = include_str!("../../assets/overlay.html");
                                     let hhtml = HSTRING::from(html);
                                     let _ = webview.NavigateToString(PCWSTR(hhtml.as_ptr()));
+
+                                    // 6. Send initialization data
+                                    let mode_str = match settings.mode {
+                                        crate::settings::BreakMode::Soft => "soft",
+                                        crate::settings::BreakMode::Hard => "hard",
+                                    };
+                                    let media_path = settings.overlay_animation.replace('\\', "/");
+                                    let init_msg = format!(
+                                        "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\"}}",
+                                        settings.break_duration_secs,
+                                        mode_str,
+                                        media_path
+                                    );
+                                    let hinit = HSTRING::from(init_msg);
+                                    let _ = webview.PostWebMessageAsJson(PCWSTR(hinit.as_ptr()));
 
                                     Ok(())
                                 })
