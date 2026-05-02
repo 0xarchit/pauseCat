@@ -11,10 +11,8 @@ use pausecat::settings::Settings;
 use pausecat::tray::TrayIcon;
 use pausecat::events::AppEvent;
 use pausecat::timer;
-use pausecat::overlay::{OverlayWindow, capture, blur};
+use pausecat::overlay::{OverlayWindow, capture, blur, webview_env};
 use pausecat::settings_ui::SettingsWindow;
-
-const TIMER_ID_CHANNEL: usize = 1;
 
 /// Main application structure to hold state and router logic.
 struct App {
@@ -26,6 +24,7 @@ struct App {
     reminder_overlay: Option<OverlayWindow>,
     settings_window: Option<SettingsWindow>,
     was_media_playing: bool,
+    pre_captured_bg: Arc<RwLock<Option<(i32, i32, Vec<u8>)>>>,
 }
 
 impl App {
@@ -43,6 +42,7 @@ impl App {
             reminder_overlay: None,
             settings_window: None,
             was_media_playing: false,
+            pre_captured_bg: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -51,16 +51,17 @@ impl App {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
 
+        let _ = webview_env::init_global_env();
         let _ = self.settings.read().unwrap().update_autostart();
-
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
 
         let settings_clone = self.settings.clone();
         let event_tx_clone = self.event_tx.clone();
         let paused_clone = self.paused.clone();
+        let bg_clone = self.pre_captured_bg.clone();
         
         thread::spawn(move || {
-            timer::run(settings_clone, event_tx_clone, paused_clone);
+            timer::run_optimized(settings_clone, event_tx_clone, paused_clone, bg_clone);
         });
 
         Ok(())
@@ -71,7 +72,7 @@ impl App {
             AppEvent::ShowOverlay => {
                 if self.reminder_overlay.is_none() {
                     self.pause_media();
-                    self.show_overlay();
+                    self.show_overlay_optimized();
                 }
             }
             AppEvent::HideOverlay | AppEvent::UserDismissed => {
@@ -107,20 +108,29 @@ impl App {
         }
     }
 
-    fn show_overlay(&mut self) {
-        let capture_result = capture::capture_virtual_screen();
-        if let Ok(captured) = capture_result {
-            let blurred = blur::blur(&captured.data, captured.width as usize, captured.height as usize, 10.0);
-            
-            let current_settings = self.settings.read().unwrap().clone();
-            if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), captured.width, captured.height, blurred, current_settings) {
-                overlay.fade_in();
-                self.reminder_overlay = Some(overlay);
-            }
+    fn show_overlay_optimized(&mut self) {
+        let (width, height, data) = if let Some(bg) = self.pre_captured_bg.read().unwrap().clone() {
+            bg
+        } else {
+            if let Ok(captured) = capture::capture_virtual_screen() {
+                let blurred = blur::blur(&captured.data, captured.width as usize, captured.height as usize, 10.0);
+                (captured.width, captured.height, blurred)
+            } else { return; }
+        };
+
+        let current_settings = self.settings.read().unwrap().clone();
+        if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), width, height, data, current_settings) {
+            overlay.fade_in();
+            self.reminder_overlay = Some(overlay);
         }
+        
+        let mut lock = self.pre_captured_bg.write().unwrap();
+        *lock = None;
     }
 
     fn pause_media(&mut self) {
+        // Use the explicit Win32 broadcast for maximum reliability.
+        // APPCOMMAND_MEDIA_PAUSE (47)
         unsafe {
             let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(47 << 16)));
         }
@@ -129,6 +139,7 @@ impl App {
 
     fn resume_media(&mut self) {
         if self.was_media_playing {
+            // APPCOMMAND_MEDIA_PLAY (46)
             unsafe {
                 let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(46 << 16)));
             }
@@ -161,7 +172,7 @@ fn setup_logging() -> windows::core::Result<()> {
         .filter_level(log::LevelFilter::Info)
         .init();
 
-    log::info!("PauseCat started");
+    log::info!("PauseCat started (Optimized)");
     Ok(())
 }
 
@@ -206,7 +217,7 @@ fn main() -> windows::core::Result<()> {
     }
 
     unsafe {
-        let _ = SetTimer(None, TIMER_ID_CHANNEL, 100, None);
+        let _ = SetTimer(None, 1, 100, None);
 
         let mut msg = MSG::default();
         while GetMessageW(&mut msg, None, 0, 0).into() {
