@@ -20,6 +20,11 @@ jobs:
       - name: Install WiX
         run: dotnet tool install --global wix
 
+      - name: Install WiX Extensions
+        run: |
+          wix extension add -g WixToolset.UI.wixext
+          wix extension add -g WixToolset.Util.wixext
+
       - name: Build Optimized Binary
         run: |
           $env:RUSTFLAGS="-C link-arg=/OPT:REF -C link-arg=/OPT:ICF"
