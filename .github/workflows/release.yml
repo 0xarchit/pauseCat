@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@e97e2d87651d2a74e044a2940971703c204e3963
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
 
       - name: Install WiX
         run: dotnet tool install --global wix
@@ -38,7 +38,7 @@ jobs:
           wix build wix/main.wxs -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -o target/release/PauseCat_Installer.msi
 
       - name: Upload Release Artifacts
-        uses: softprops/action-gh-release@3bb1273295061458407f9736eb729ad897735916
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
         with:
           files: |
             target/release/PauseCat_Installer.msi
