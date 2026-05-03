@@ -209,15 +209,19 @@ impl App {
     }
 
     fn pause_media(&mut self) {
-        unsafe {
-            let _ = SendMessageW(
-                HWND_BROADCAST,
-                WM_APPCOMMAND,
-                Some(WPARAM(0)),
-                Some(LPARAM(47 << 16)),
-            );
+        if pausecat::system::is_media_playing() {
+            unsafe {
+                let _ = SendMessageW(
+                    HWND_BROADCAST,
+                    WM_APPCOMMAND,
+                    Some(WPARAM(0)),
+                    Some(LPARAM(47 << 16)),
+                );
+            }
+            self.was_media_playing = true;
+        } else {
+            self.was_media_playing = false;
         }
-        self.was_media_playing = true;
     }
 
     fn resume_media(&mut self) {

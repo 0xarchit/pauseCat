@@ -95,3 +95,30 @@ fn get_process_name_from_hwnd(hwnd: HWND) -> Option<String> {
         }
     }
 }
+
+pub fn is_media_playing() -> bool {
+    use windows::Media::Control::{GlobalSystemMediaTransportControlsSessionManager, GlobalSystemMediaTransportControlsSessionPlaybackStatus};
+    
+    let result = (|| -> windows::core::Result<bool> {
+        let op = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?;
+        
+        // In windows-rs 0.62, we can try to GetResults directly if it's sync-capable 
+        // or just wait for status to not be 'Started'.
+        // Since we don't have AsyncStatus easy access, we'll try a loop with GetResults
+        
+        for _ in 0..100 {
+            if let Ok(manager) = op.GetResults() {
+                if let Ok(session) = manager.GetCurrentSession() {
+                    let info = session.GetPlaybackInfo()?;
+                    let status = info.PlaybackStatus()?;
+                    return Ok(status == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
+                }
+                return Ok(false);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        Ok(false)
+    })();
+
+    result.unwrap_or(false)
+}
