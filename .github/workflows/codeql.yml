@@ -1,0 +1,97 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '8 5 * * 0'
+
+permissions:
+  security-events: write
+  contents: read
+  pull-requests: read
+  actions: read
+  packages: read
+
+jobs:
+  detect-changes:
+    name: Detect Changed Languages
+    runs-on: ubuntu-latest
+    outputs:
+      languages: ${{ steps.set-languages.outputs.languages }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Filter Paths
+        id: filter
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+        with:
+          filters: |
+            rust:
+              - 'src/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '**/*.rs'
+            actions:
+              - '.github/workflows/**'
+
+      - name: Set Language Matrix
+        id: set-languages
+        run: |
+          langs=()
+          
+          if [[ "${{ github.event_name }}" == "schedule" || "${{ steps.filter.outputs.rust }}" == "true" ]]; then
+            langs+=('"rust"')
+          fi
+          
+          if [[ "${{ github.event_name }}" == "schedule" || "${{ steps.filter.outputs.actions }}" == "true" ]]; then
+            langs+=('"actions"')
+          fi
+          
+          json_array="[$(IFS=,; echo "${langs[*]}")]"
+          echo "languages=$json_array" >> $GITHUB_OUTPUT
+
+  analyze:
+    name: Analyze
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.languages != '[]' }}
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(needs.detect-changes.outputs.languages) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e46ed2cbd01164d986452f91f178727624ae40d7
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+          config: |
+            threat-models: remote
+
+      - name: Install Rust Toolchain
+        if: matrix.language == 'rust'
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+
+      - name: Build Production Code
+        if: matrix.language == 'rust'
+        run: |
+          $env:RUSTFLAGS="-C link-arg=/OPT:REF -C link-arg=/OPT:ICF"
+          cargo build --release
+
+      - name: Autobuild
+        if: matrix.language != 'rust'
+        uses: github/codeql-action/autobuild@e46ed2cbd01164d986452f91f178727624ae40d7
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@e46ed2cbd01164d986452f91f178727624ae40d7
+        with:
+          category: "/language:${{matrix.language}}"
