@@ -1,7 +1,8 @@
 [package]
 name = "pausecat"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
+
 
 [dependencies]
 windows = { version = "0.62", features = [
@@ -19,6 +20,7 @@ windows = { version = "0.62", features = [
     "Win32_UI_Controls_Dialogs",
     "Win32_System_Threading",
     "Win32_System_ProcessStatus",
+    "Win32_System_RemoteDesktop",
     "Win32_Security",
     "Win32_System_Variant",
     "Win32_System_Memory",

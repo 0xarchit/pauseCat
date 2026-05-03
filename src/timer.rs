@@ -8,14 +8,26 @@ use crate::settings::Settings;
 use crate::overlay::{capture, blur};
 use crate::system;
 
+pub fn sleep_interruptible(duration: Duration, paused: &AtomicBool) {
+    let start = Instant::now();
+    while start.elapsed() < duration {
+        if paused.load(Ordering::Relaxed) {
+            thread::sleep(Duration::from_millis(100));
+            continue;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
 pub fn run(settings: Arc<RwLock<Settings>>, event_tx: Sender<AppEvent>, paused: Arc<AtomicBool>) {
-    run_optimized(settings, event_tx, paused, Arc::new(RwLock::new(None)));
+    run_optimized(settings, event_tx, paused, Arc::new(AtomicBool::new(false)), Arc::new(RwLock::new(None)));
 }
 
 pub fn run_optimized(
     settings: Arc<RwLock<Settings>>, 
     event_tx: Sender<AppEvent>, 
     paused: Arc<AtomicBool>,
+    session_paused: Arc<AtomicBool>,
     pre_captured_bg: Arc<RwLock<Option<(i32, i32, Vec<u8>)>>>
 ) {
     let mut last_tick = Instant::now();
@@ -51,7 +63,8 @@ pub fn run_optimized(
             }
         }
         
-        if paused.load(Ordering::Relaxed) {
+        // PAUSE CHECK: Manual Pause OR Session Lock
+        if paused.load(Ordering::Relaxed) || session_paused.load(Ordering::Relaxed) {
             last_tick = Instant::now();
             continue;
         }
@@ -65,7 +78,6 @@ pub fn run_optimized(
             if !is_breaking && time_remaining.as_secs() <= 5 && !pre_capture_triggered {
                 pre_capture_triggered = true;
                 
-                // Whitelist Check before pre-capture
                 let should_skip = {
                     let s = settings.read().unwrap();
                     if let Some(fg_process) = system::get_foreground_process_name() {
@@ -76,7 +88,6 @@ pub fn run_optimized(
                 };
 
                 if should_skip {
-                    // Postpone by 1 minute
                     time_remaining = Duration::from_secs(60);
                     pre_capture_triggered = false;
                     log::info!("Break postponed: Whitelisted app in focus.");
@@ -94,7 +105,6 @@ pub fn run_optimized(
             }
         } else {
             if !is_breaking {
-                // Final Whitelist Check before showing overlay
                 let should_skip = {
                     let s = settings.read().unwrap();
                     if let Some(fg_process) = system::get_foreground_process_name() {
@@ -108,6 +118,11 @@ pub fn run_optimized(
                     time_remaining = Duration::from_secs(60);
                     pre_capture_triggered = false;
                     log::info!("Break skipped: Whitelisted app in focus.");
+                    continue;
+                }
+
+                if session_paused.load(Ordering::Relaxed) {
+                    time_remaining = Duration::from_secs(5);
                     continue;
                 }
 
