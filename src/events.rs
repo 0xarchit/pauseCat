@@ -5,6 +5,7 @@ pub enum AppEvent {
     ShowOverlay,
     HideOverlay,
     UserDismissed,
+    SettingsClosed,
     TogglePause,
     OpenSettings,
     Quit,
