@@ -188,11 +188,13 @@ impl SettingsWindow {
                                                 if let Ok(data) = serde_json::from_str::<serde_json::Value>(&json) {
                                                     if let Ok(new_settings) = serde_json::from_value::<Settings>(data["settings"].clone()) {
                                                         let _ = sender_clone.send(AppEvent::ConfigChanged(new_settings));
-                                                        let _ = sender_clone.send(AppEvent::UserDismissed); 
+                                                        let _ = sender_clone.send(AppEvent::SettingsClosed); 
+                                                    } else {
+                                                        log::error!("Failed to parse Settings from JSON");
                                                     }
                                                 }
                                             } else if json.contains("\"action\":\"close\"") {
-                                                let _ = sender_clone.send(AppEvent::UserDismissed);
+                                                let _ = sender_clone.send(AppEvent::SettingsClosed);
                                             } else if json.contains("\"action\":\"get_apps\"") {
                                                 let apps = crate::system::get_running_apps();
                                                 let apps_json = serde_json::to_string(&apps).unwrap_or_default();
@@ -329,9 +331,21 @@ unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM
             }
             LRESULT(0)
         }
+        WM_CLOSE => {
+            let sender_handle = GetPropW(hwnd, w!("Sender"));
+            if !sender_handle.is_invalid() {
+                let sender = unsafe { &*(sender_handle.0 as *const Sender<AppEvent>) };
+                let _ = sender.send(AppEvent::SettingsClosed);
+            }
+            LRESULT(0) // Prevent immediate destruction, wait for Drop
+        }
         WM_DESTROY => {
-            let _ = RemovePropW(hwnd, w!("Sender")).map(|h| if !h.is_invalid() { drop(Box::from_raw(h.0 as *mut Sender<AppEvent>)); });
-            let _ = RemovePropW(hwnd, w!("Settings")).map(|h| if !h.is_invalid() { drop(Box::from_raw(h.0 as *mut Settings)); });
+            let sender_handle = RemovePropW(hwnd, w!("Sender")).unwrap_or_default();
+            if !sender_handle.is_invalid() {
+                drop(unsafe { Box::from_raw(sender_handle.0 as *mut Sender<AppEvent>) });
+            }
+            
+            let _ = RemovePropW(hwnd, w!("Settings")).map(|h| if !h.is_invalid() { drop(unsafe { Box::from_raw(h.0 as *mut Settings) }); });
             
             if let Ok(mut lock) = CONTROLLERS.lock() {
                 lock.remove(&(hwnd.0 as isize));
