@@ -1,11 +1,11 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" 
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
-  <Package Name="PauseCat" 
-           Manufacturer="0xarchit" 
-           Version="1.0.0" 
-           UpgradeCode="570a2736-2391-4c12-8e3d-74d32098d57d" 
+  <Package Name="PauseCat"
+           Manufacturer="0xarchit"
+           Version="1.0.0"
+           UpgradeCode="570a2736-2391-4c12-8e3d-74d32098d57d"
            Language="1033">
-    
+
     <SummaryInformation Keywords="Installer" Description="PauseCat Break Reminder" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <Media Id="1" Cabinet="pausecat.cab" EmbedCab="yes" />
@@ -50,7 +50,7 @@
 
     <WixVariable Id="WixUILicenseRtf" Value="assets\LICENSE.rtf" />
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
-    
+
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch PauseCat now" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
     <Property Id="WixShellExecTarget" Value="[#PauseCatEXE]" />

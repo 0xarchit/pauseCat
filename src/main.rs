@@ -60,6 +60,9 @@ impl App {
         pausecat::system::set_tray_menu_theme(self.is_dark_mode);
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
 
+        // Cleanup any old update files from previous sessions
+        pausecat::updater::cleanup_updates();
+
         let settings_clone = self.settings.clone();
         let event_tx_clone = self.event_tx.clone();
         let paused_clone = self.paused.clone();
@@ -109,6 +112,38 @@ impl App {
                 let mut settings = self.settings.write().unwrap();
                 *settings = new_settings;
                 let _ = settings.save();
+            }
+            AppEvent::CheckForUpdates => {
+                let event_tx = self.event_tx.clone();
+                thread::spawn(move || {
+                    match pausecat::updater::check_for_updates() {
+                        Ok(info) => { let _ = event_tx.send(AppEvent::UpdateStatus(info)); }
+                        Err(e) => { let _ = event_tx.send(AppEvent::UpdateError(e.to_string())); }
+                    }
+                });
+            }
+            AppEvent::UpdateStatus(info) => {
+                if let Some(ref mut win) = self.settings_window {
+                    win.send_update_status(info);
+                }
+            }
+            AppEvent::StartUpdate => {
+                let event_tx = self.event_tx.clone();
+                thread::spawn(move || {
+                    if let Err(e) = pausecat::updater::download_and_install(event_tx.clone()) {
+                        let _ = event_tx.send(AppEvent::UpdateError(e.to_string()));
+                    }
+                });
+            }
+            AppEvent::UpdateProgress(percentage) => {
+                if let Some(ref mut win) = self.settings_window {
+                    win.send_update_progress(percentage);
+                }
+            }
+            AppEvent::UpdateError(err) => {
+                if let Some(ref mut win) = self.settings_window {
+                    win.send_update_error(err);
+                }
             }
             AppEvent::ThemeChanged(is_dark) => {
                 self.is_dark_mode = is_dark;

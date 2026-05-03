@@ -5,3 +5,4 @@ pub mod timer;
 pub mod overlay;
 pub mod events;
 pub mod system;
+pub mod updater;
