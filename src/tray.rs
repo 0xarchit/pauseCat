@@ -6,6 +6,7 @@ use windows::{
     Win32::UI::WindowsAndMessaging::*,
     Win32::UI::Shell::*,
     Win32::System::LibraryLoader::*,
+    Win32::System::RemoteDesktop::*,
 };
 
 const WM_TRAY_ICON: u32 = WM_APP + 1;
@@ -44,6 +45,9 @@ impl TrayIcon {
                 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                 None, None, Some(instance), Some(Box::into_raw(Box::new(sender)) as *mut _)
             )?;
+
+            // Register for Session Notifications (Lock/Unlock)
+            let _ = WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
 
             let h_icon = match LoadImageW(
                 Some(instance),
@@ -100,6 +104,7 @@ impl TrayIcon {
 impl Drop for TrayIcon {
     fn drop(&mut self) {
         unsafe {
+            let _ = WTSUnRegisterSessionNotification(self.hwnd);
             let nid = NOTIFYICONDATAW {
                 cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
                 hWnd: self.hwnd,
@@ -119,7 +124,6 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
             let sender = (*create_struct).lpCreateParams;
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, sender as isize);
             
-            // Send initial theme state
             let is_dark = crate::system::is_dark_mode();
             let _ = (&*(sender as *const Sender<AppEvent>)).send(AppEvent::ThemeChanged(is_dark));
             
@@ -131,6 +135,42 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
                 let sender = &*sender_ptr;
                 let is_dark = crate::system::is_dark_mode();
                 let _ = sender.send(AppEvent::ThemeChanged(is_dark));
+            }
+            LRESULT(0)
+        }
+        WM_WTSSESSION_CHANGE => {
+            let sender_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const Sender<AppEvent>;
+            if !sender_ptr.is_null() {
+                let sender = &*sender_ptr;
+                match wparam.0 as u32 {
+                    WTS_SESSION_LOCK => { 
+                        log::info!("Session Locked: Pausing timer.");
+                        let _ = sender.send(AppEvent::SessionLocked); 
+                    }
+                    WTS_SESSION_UNLOCK => { 
+                        log::info!("Session Unlocked: Resuming timer.");
+                        let _ = sender.send(AppEvent::SessionUnlocked); 
+                    }
+                    _ => {}
+                }
+            }
+            LRESULT(0)
+        }
+        WM_POWERBROADCAST => {
+            let sender_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const Sender<AppEvent>;
+            if !sender_ptr.is_null() {
+                let sender = &*sender_ptr;
+                match wparam.0 as u32 {
+                    PBT_APMSUSPEND => {
+                        log::info!("System Suspending: Pausing timer.");
+                        let _ = sender.send(AppEvent::SessionLocked);
+                    }
+                    PBT_APMRESUMESUSPEND => {
+                        log::info!("System Resumed: Resuming timer.");
+                        let _ = sender.send(AppEvent::SessionUnlocked);
+                    }
+                    _ => {}
+                }
             }
             LRESULT(0)
         }
