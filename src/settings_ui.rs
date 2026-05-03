@@ -1,7 +1,6 @@
 use std::sync::mpsc::Sender;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use std::path::PathBuf;
 use windows::core::*;
 use windows::Win32::Foundation::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
@@ -16,6 +15,7 @@ use crate::events::AppEvent;
 use crate::settings::Settings;
 use base64::{Engine as _, engine::general_purpose};
 use crate::overlay::webview_env;
+use std::path::PathBuf;
 
 struct ComSafe<T>(T);
 unsafe impl<T> Send for ComSafe<T> {}
@@ -92,14 +92,12 @@ impl SettingsWindow {
                         let webview = controller.CoreWebView2()?;
                         let webview_settings = webview.Settings()?;
                         
-                        // Professional Native Hardening
                         let _ = webview_settings.SetIsWebMessageEnabled(true);
                         let _ = webview_settings.SetAreDefaultContextMenusEnabled(false);
                         let _ = webview_settings.SetAreDevToolsEnabled(false);
                         let _ = webview_settings.SetIsZoomControlEnabled(false);
                         let _ = webview_settings.SetIsStatusBarEnabled(false);
 
-                        // Hardened Anti-Zoom Script (Catches touchpads/pinch/Ctrl+Keys)
                         let _ = webview.AddScriptToExecuteOnDocumentCreated(w!("
                             window.addEventListener('wheel', function(e) {
                                 if (e.ctrlKey) {
@@ -201,6 +199,10 @@ impl SettingsWindow {
                                                 let msg = format!("{{\"action\":\"apps_list\", \"apps\": {}}}", apps_json);
                                                 let hmsg = HSTRING::from(msg);
                                                 let _ = webview_clone.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr()));
+                                            } else if json.contains("\"action\":\"check_updates\"") {
+                                                let _ = sender_clone.send(AppEvent::CheckForUpdates);
+                                            } else if json.contains("\"action\":\"start_update\"") {
+                                                let _ = sender_clone.send(AppEvent::StartUpdate);
                                             } else if json.contains("\"action\":\"select_media\"") {
                                                 if let Some(path) = pick_file() {
                                                     let msg = format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path.replace('\\', "/"));
@@ -243,6 +245,43 @@ impl SettingsWindow {
             if let Some(safe_controller) = lock.get(&(self.hwnd.0 as isize)) {
                 if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {
                     let msg = format!("{{\"action\":\"theme_changed\", \"isDark\": {}}}", is_dark);
+                    let hmsg = HSTRING::from(msg);
+                    let _ = unsafe { webview.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr())) };
+                }
+            }
+        }
+    }
+
+    pub fn send_update_status(&self, info: crate::updater::UpdateInfo) {
+        if let Ok(lock) = CONTROLLERS.lock() {
+            if let Some(safe_controller) = lock.get(&(self.hwnd.0 as isize)) {
+                if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {
+                    let info_json = serde_json::to_string(&info).unwrap_or_default();
+                    let msg = format!("{{\"action\":\"update_status\", \"info\": {}}}", info_json);
+                    let hmsg = HSTRING::from(msg);
+                    let _ = unsafe { webview.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr())) };
+                }
+            }
+        }
+    }
+
+    pub fn send_update_progress(&self, percentage: u32) {
+        if let Ok(lock) = CONTROLLERS.lock() {
+            if let Some(safe_controller) = lock.get(&(self.hwnd.0 as isize)) {
+                if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {
+                    let msg = format!("{{\"action\":\"update_progress\", \"percentage\": {}}}", percentage);
+                    let hmsg = HSTRING::from(msg);
+                    let _ = unsafe { webview.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr())) };
+                }
+            }
+        }
+    }
+
+    pub fn send_update_error(&self, error: String) {
+        if let Ok(lock) = CONTROLLERS.lock() {
+            if let Some(safe_controller) = lock.get(&(self.hwnd.0 as isize)) {
+                if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {
+                    let msg = format!("{{\"action\":\"update_error\", \"error\": \"{}\"}}", error.replace('"', "\\\""));
                     let hmsg = HSTRING::from(msg);
                     let _ = unsafe { webview.PostWebMessageAsJson(PCWSTR(hmsg.as_ptr())) };
                 }

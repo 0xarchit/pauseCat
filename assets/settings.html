@@ -17,6 +17,12 @@
             --card-bg: #ffffff;
             --header-bg: #ffffff;
             --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --update-bg: #ecfdf3;
+            --update-text: #027a48;
+            --update-border: #abfdfd;
+            --danger-bg: #fef2f2;
+            --danger-text: #b91c1c;
+            --danger-border: #fecaca;
         }
 
         body.dark {
@@ -30,11 +36,17 @@
             --ring: #2d1d5a;
             --card-bg: #1a1a1a;
             --header-bg: #121212;
+            --update-bg: #052e16;
+            --update-text: #6ee7b7;
+            --update-border: #064e3b;
+            --danger-bg: #450a0a;
+            --danger-text: #fca5a5;
+            --danger-border: #7f1d1d;
         }
 
         html, body {
             overflow: hidden;
-            touch-action: none; /* Prevents browser handling of pinch-zoom */
+            touch-action: none;
             user-select: none;
             -webkit-user-drag: none;
         }
@@ -54,328 +66,169 @@
         .header {
             padding: 16px 24px;
             display: flex;
-            align-items: center;
-            gap: 12px;
+            align-items: center; gap: 12px;
             border-bottom: 1px solid var(--border);
             background: var(--header-bg);
-            z-index: 10;
-            flex-shrink: 0;
+            z-index: 10; flex-shrink: 0;
         }
 
-        .header h1 {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .header img {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            object-fit: contain;
-        }
+        .header h1 { font-size: 1.125rem; font-weight: 600; margin: 0; }
+        .header img { width: 28px; height: 28px; border-radius: 6px; object-fit: contain; }
 
         .scroll-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px 24px;
+            flex: 1; overflow-y: auto; padding: 20px 24px;
             background: var(--secondary-bg);
-            scrollbar-width: none;
-            -ms-overflow-style: none;
+            scrollbar-width: none; -ms-overflow-style: none;
         }
-
-        .scroll-container::-webkit-scrollbar {
-            display: none;
-        }
+        .scroll-container::-webkit-scrollbar { display: none; }
 
         .section-title {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 10px;
-            margin-top: 10px;
+            font-size: 0.7rem; font-weight: 600;
+            color: var(--text-secondary); text-transform: uppercase;
+            letter-spacing: 0.05em; margin-bottom: 10px; margin-top: 10px;
         }
 
         .card {
             background: var(--card-bg);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            border-radius: 12px; padding: 16px;
+            margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Modal / Popup Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000; animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            width: 85%; max-width: 400px;
+            border-radius: 16px; padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; display: block; }
+        .modal-desc { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5; display: block; }
+
+        /* Progress Bar for Update */
+        .progress-container {
+            width: 100%; height: 8px;
+            background: var(--secondary-bg);
+            border-radius: 4px; overflow: hidden;
+            margin-bottom: 12px; border: 1px solid var(--border);
+        }
+        .progress-bar {
+            height: 100%; background: var(--accent);
+            width: 0%; transition: width 0.2s ease;
         }
 
         .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            gap: 12px;
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 16px; gap: 12px;
         }
+        .setting-row:last-child { margin-bottom: 0; }
 
-        .setting-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .setting-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            flex: 1;
-        }
-
-        .setting-label {
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .setting-description {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
+        .setting-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+        .setting-label { font-size: 0.875rem; font-weight: 500; }
+        .setting-description { font-size: 0.75rem; color: var(--text-secondary); }
 
         input[type="number"], input[type="text"], select {
-            padding: 6px 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 0.85rem;
-            outline: none;
-            transition: all 0.2s;
-            background: var(--card-bg);
-            color: var(--text-main);
-            font-family: inherit;
+            padding: 6px 10px; border: 1px solid var(--border);
+            border-radius: 6px; font-size: 0.85rem; outline: none;
+            transition: all 0.2s; background: var(--card-bg);
+            color: var(--text-main); font-family: inherit;
         }
-
         input[type="number"] { width: 65px; }
         select { width: 110px; }
+        input[type="range"] { width: 120px; accent-color: var(--accent); cursor: pointer; }
+        select option { background-color: var(--card-bg); color: var(--text-main); }
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
 
-        input[type="range"] {
-            width: 120px;
-            accent-color: var(--accent);
-            cursor: pointer;
-        }
-
-        select option {
-            background-color: var(--card-bg);
-            color: var(--text-main);
-        }
-
-        input:focus, select:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--ring);
-        }
-
-        /* Live Preview Container */
         .preview-container {
-            width: 100%;
-            height: 160px;
-            background: #000;
-            border-radius: 10px;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-            flex-shrink: 0;
+            width: 100%; height: 160px; background: #000;
+            border-radius: 10px; position: relative; overflow: hidden;
+            margin-bottom: 20px; border: 1px solid var(--border); flex-shrink: 0;
         }
-
-        .preview-bg {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            opacity: 0.5;
-        }
-
+        .preview-bg { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; }
         .preview-bubble {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-weight: 700;
-            pointer-events: none;
+            position: absolute; background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-weight: 700; pointer-events: none;
             box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            transition: background-color 0.2s ease, width 0.2s ease, height 0.2s ease, left 0.2s ease, top 0.2s ease;
+            transition: all 0.2s ease;
         }
 
-        .media-preview-area {
-            position: relative;
-            margin-top: 10px;
-        }
-
+        .media-preview-area { position: relative; margin-top: 10px; }
         .media-preview {
-            width: 100%;
-            height: 140px;
-            border: 2px dashed var(--border);
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: var(--card-bg);
-            cursor: pointer;
-            transition: all 0.2s;
-            overflow: hidden;
+            width: 100%; height: 140px; border: 2px dashed var(--border);
+            border-radius: 10px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; background: var(--card-bg);
+            cursor: pointer; transition: all 0.2s; overflow: hidden;
         }
-
-        .media-preview:hover {
-            border-color: var(--accent);
-            background: var(--secondary-bg);
-        }
-
-        .media-preview img, .media-preview video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .media-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-        }
+        .media-preview:hover { border-color: var(--accent); background: var(--secondary-bg); }
+        .media-preview img, .media-preview video { width: 100%; height: 100%; object-fit: cover; }
+        .media-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 0.8rem; }
 
         .reset-media {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            background: rgba(16, 24, 40, 0.7);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 3px 6px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            cursor: pointer;
-            backdrop-filter: blur(4px);
-            transition: all 0.2s;
+            position: absolute; top: 6px; right: 6px; background: rgba(16, 24, 40, 0.7);
+            color: white; border: none; border-radius: 6px; padding: 3px 6px;
+            font-size: 0.7rem; font-weight: 500; cursor: pointer; backdrop-filter: blur(4px);
         }
 
-        .list-container {
-            margin-top: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
+        .list-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
         .tag {
-            background: var(--ring);
-            color: var(--accent);
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            border: 1px solid var(--accent);
+            background: var(--ring); color: var(--accent); padding: 3px 8px;
+            border-radius: 12px; font-size: 0.7rem; font-weight: 600;
+            display: flex; align-items: center; gap: 4px; border: 1px solid var(--accent);
         }
+        .tag span { cursor: pointer; font-size: 0.9rem; line-height: 1; }
 
-        .tag span {
-            cursor: pointer;
-            font-size: 0.9rem;
-            line-height: 1;
-        }
-
-        .add-row {
-            display: flex;
-            gap: 6px;
-            margin-top: 12px;
-        }
-
-        .add-row input, .add-row select {
-            flex: 1;
-            width: auto;
-        }
+        .add-row { display: flex; gap: 6px; margin-top: 12px; }
+        .add-row input, .add-row select { flex: 1; width: auto; }
 
         .footer {
-            padding: 12px 24px;
-            background: var(--header-bg);
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            flex-shrink: 0;
+            padding: 12px 24px; background: var(--header-bg); border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0;
         }
 
         button {
-            padding: 8px 14px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+            padding: 8px 14px; border-radius: 6px; font-size: 0.85rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;
         }
 
-        .btn-primary {
-            background-color: var(--accent);
-            color: white;
-            border: 1px solid var(--accent);
-        }
-
+        .btn-primary { background-color: var(--accent); color: white; border-color: var(--accent); }
         .btn-primary:hover { background-color: var(--accent-hover); }
-
-        .btn-secondary {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-        }
-
+        .btn-secondary { background-color: var(--bg-color); color: var(--text-main); border-color: var(--border); }
         .btn-secondary:hover { background-color: var(--secondary-bg); }
 
-        /* Switch */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 36px;
-            height: 18px;
-        }
+        .switch { position: relative; display: inline-block; width: 36px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: var(--border);
-            transition: .3s;
-            border-radius: 18px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 14px; width: 14px;
-            left: 2px; bottom: 2px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .3s; border-radius: 18px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(18px); }
 
         .hidden { display: none !important; }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0) translateX(0); }
-            50% { transform: translateY(-10px) translateX(5px); }
-        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: var(--pulse-opacity-start); } 50% { transform: scale(1.05); opacity: var(--pulse-opacity-end); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        @keyframes bounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
+        .notification {
+            position: fixed; bottom: 24px; left: 24px; right: 24px; padding: 16px;
+            border-radius: 10px; background: var(--card-bg); border: 1px solid var(--border);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15); z-index: 1100;
+            display: flex; flex-direction: column; gap: 8px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: var(--pulse-opacity-start); }
-            50% { transform: scale(1.05); opacity: var(--pulse-opacity-end); }
-        }
+        @keyframes slideUp { from { transform: translateY(100%) opacity: 0; } to { transform: translateY(0) opacity: 1; } }
     </style>
 </head>
 <body>
@@ -385,6 +238,33 @@
     </div>
 
     <div class="scroll-container">
+        <!-- Professional Update Popup (Modal) -->
+        <div id="update-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <span class="modal-title">✨ Update Available</span>
+                <span id="update-modal-desc" class="modal-desc">A newer version of PauseCat is ready for you. Experience new features and better performance!</span>
+                
+                <div id="update-progress-section" class="hidden">
+                    <div class="progress-container">
+                        <div id="update-progress-bar" class="progress-bar"></div>
+                    </div>
+                    <span id="update-progress-label" style="font-size: 0.8rem; opacity: 0.8;">Downloading... 0%</span>
+                </div>
+
+                <div id="update-actions" style="display: flex; justify-content: center; gap: 12px;">
+                    <button class="btn-secondary" onclick="hideUpdateModal()">Later</button>
+                    <button class="btn-primary" onclick="startUpdate()">Update Now</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Notification Popup -->
+        <div id="notification-box" class="notification hidden">
+            <span id="notification-title" style="font-weight: 700; font-size: 0.9rem;">Notification</span>
+            <span id="notification-msg" style="font-size: 0.85rem; opacity: 0.8;">Message details go here.</span>
+            <button class="btn-primary" style="align-self: flex-end; padding: 4px 12px; font-size: 0.75rem;" onclick="hideNotification()">Close</button>
+        </div>
+
         <div class="section-title">Live Preview</div>
         <div class="preview-container">
             <img id="live-preview-bg-img" class="preview-bg hidden">
@@ -532,8 +412,8 @@
                 <select id="running-apps-select">
                     <option value="">Select app...</option>
                 </select>
-                <button class="btn-secondary" style="padding: 6px 12px;" onclick="refreshApps()">Refresh</button>
-                <button class="btn-primary" style="padding: 6px 12px;" onclick="addWhitelistedApp()">Add</button>
+                <button class="btn-secondary" style="padding: 8px 12px;" onclick="refreshApps()">Refresh</button>
+                <button class="btn-primary" style="padding: 8px 12px;" onclick="addWhitelistedApp()">Add</button>
             </div>
         </div>
 
@@ -549,6 +429,13 @@
                     <span class="slider"></span>
                 </label>
             </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <span class="setting-label">App Updates</span>
+                    <span class="setting-description">Check for new versions on GitHub</span>
+                </div>
+                <button id="check-update-btn" class="btn-secondary" onclick="checkUpdates()">Check for Updates</button>
+            </div>
         </div>
     </div>
 
@@ -558,42 +445,52 @@
     </div>
 
     <script>
-        // Disable multi-touch pinch zoom via JS
-        document.addEventListener('touchstart', function (event) {
-            if (event.touches.length > 1) {
-                event.preventDefault();
-            }
-        }, { passive: false });
-
-        document.addEventListener('gesturestart', function (event) {
-            event.preventDefault();
-        });
+        document.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+        document.addEventListener('gesturestart', (e) => e.preventDefault());
 
         let currentMediaPath = "";
         let currentWhitelist = [];
         let currentBreakMessages = [];
         let isDarkMode = false;
 
-        function selectMedia() {
-            window.chrome.webview.postMessage({ action: "select_media" });
+        function showNotification(title, msg) {
+            document.getElementById('notification-title').innerText = title;
+            document.getElementById('notification-msg').innerText = msg;
+            document.getElementById('notification-box').classList.remove('hidden');
+            setTimeout(hideNotification, 5000);
+        }
+        function hideNotification() { document.getElementById('notification-box').classList.add('hidden'); }
+        
+        function showUpdateModal(version) {
+            document.getElementById('update-modal-desc').innerText = `Version ${version} is available. Do you want to update now?`;
+            document.getElementById('update-modal').classList.remove('hidden');
+        }
+        function hideUpdateModal() { document.getElementById('update-modal').classList.add('hidden'); }
+
+        function selectMedia() { window.chrome.webview.postMessage({ action: "select_media" }); }
+        function refreshApps() { window.chrome.webview.postMessage({ action: "get_apps" }); }
+        
+        function checkUpdates() {
+            const btn = document.getElementById('check-update-btn');
+            btn.disabled = true; btn.innerText = "Checking...";
+            window.chrome.webview.postMessage({ action: "check_updates" });
         }
 
-        function refreshApps() {
-            window.chrome.webview.postMessage({ action: "get_apps" });
+        function startUpdate() {
+            document.getElementById('update-actions').classList.add('hidden');
+            document.getElementById('update-progress-section').classList.remove('hidden');
+            window.chrome.webview.postMessage({ action: "start_update" });
         }
 
         function resetToDefault(event) {
-            event.stopPropagation();
-            currentMediaPath = "default.webm";
-            updatePreview("default.webm");
+            event.stopPropagation(); currentMediaPath = "default.webm"; updatePreview("default.webm");
         }
 
         function addWhitelistedApp() {
             const select = document.getElementById('running-apps-select');
             const app = select.value;
             if (app && !currentWhitelist.includes(app)) {
-                currentWhitelist.push(app);
-                renderList('whitelist-tags', currentWhitelist, 'whitelist');
+                currentWhitelist.push(app); renderList('whitelist-tags', currentWhitelist, 'whitelist');
             }
         }
 
@@ -601,15 +498,12 @@
             const input = document.getElementById('new-message-input');
             const msg = input.value.trim();
             if (msg && !currentBreakMessages.includes(msg)) {
-                currentBreakMessages.push(msg);
-                input.value = "";
-                renderList('break-messages-tags', currentBreakMessages, 'messages');
+                currentBreakMessages.push(msg); input.value = ""; renderList('break-messages-tags', currentBreakMessages, 'messages');
             }
         }
 
         function renderList(containerId, list, type) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = "";
+            const container = document.getElementById(containerId); container.innerHTML = "";
             list.forEach(item => {
                 const tag = document.createElement('div');
                 tag.className = 'tag';
@@ -620,11 +514,9 @@
 
         window.handleRemove = (type, item) => {
             if (type === 'whitelist') {
-                currentWhitelist = currentWhitelist.filter(i => i !== item);
-                renderList('whitelist-tags', currentWhitelist, 'whitelist');
+                currentWhitelist = currentWhitelist.filter(i => i !== item); renderList('whitelist-tags', currentWhitelist, 'whitelist');
             } else {
-                currentBreakMessages = currentBreakMessages.filter(i => i !== item);
-                renderList('break-messages-tags', currentBreakMessages, 'messages');
+                currentBreakMessages = currentBreakMessages.filter(i => i !== item); renderList('break-messages-tags', currentBreakMessages, 'messages');
             }
         };
 
@@ -635,30 +527,17 @@
             const posX = parseInt(document.getElementById('bubble_pos_x').value);
             const posY = parseInt(document.getElementById('bubble_pos_y').value);
             const anim = document.getElementById('animation_style').value;
-
-            const previewScale = 4.8;
-            const previewSize = size / previewScale;
-            
-            bubble.style.width = previewSize + "px";
-            bubble.style.height = previewSize + "px";
-            bubble.style.fontSize = (previewSize / 4) + "px";
-            
-            bubble.style.backgroundColor = isDarkMode 
-                ? `rgba(0, 0, 0, ${opacity})` 
-                : `rgba(255, 255, 255, ${opacity})`;
-            
+            const previewSize = size / 4.8;
+            bubble.style.width = previewSize + "px"; bubble.style.height = previewSize + "px"; bubble.style.fontSize = (previewSize / 4) + "px";
+            bubble.style.backgroundColor = isDarkMode ? `rgba(0,0,0,${opacity})` : `rgba(255,255,255,${opacity})`;
             bubble.style.left = `calc(${posX}% - ${previewSize * (posX/100)}px)`;
             bubble.style.top = `calc(${posY}% - ${previewSize * (posY/100)}px)`;
-            
             if (anim === 'pulse') {
                 bubble.style.setProperty('--pulse-opacity-start', opacity);
                 bubble.style.setProperty('--pulse-opacity-end', Math.max(0, opacity - 0.3));
                 bubble.style.animation = `pulse 2s ease-in-out infinite`;
-            } else if (anim !== 'none') {
-                bubble.style.animation = `${anim} 3s ease-in-out infinite`;
-            } else {
-                bubble.style.animation = 'none';
-            }
+            } else if (anim !== 'none') { bubble.style.animation = `${anim} 3s ease-in-out infinite`;
+            } else { bubble.style.animation = 'none'; }
         }
 
         function save() {
@@ -690,43 +569,45 @@
                 document.getElementById('autostart').checked = s.autostart;
                 document.getElementById('randomize_messages').checked = s.randomize_messages;
                 document.getElementById('show_work_status').checked = s.show_work_duration_status !== false;
-                
                 document.getElementById('bubble_opacity').value = s.bubble_opacity || 0.1;
                 document.getElementById('bubble_size').value = s.bubble_size || 580;
                 document.getElementById('bubble_pos_x').value = s.bubble_pos_x || 5;
                 document.getElementById('bubble_pos_y').value = s.bubble_pos_y || 5;
                 document.getElementById('animation_style').value = s.animation_style || "float";
-
                 if (s.overlay_animation) updatePreview(s.overlay_animation);
-                
-                currentWhitelist = s.whitelist || [];
-                renderList('whitelist-tags', currentWhitelist, 'whitelist');
-
-                currentBreakMessages = s.break_messages || ["Breathe In..."];
-                renderList('break-messages-tags', currentBreakMessages, 'messages');
-
+                currentWhitelist = s.whitelist || []; renderList('whitelist-tags', currentWhitelist, 'whitelist');
+                currentBreakMessages = s.break_messages || ["Breathe In..."]; renderList('break-messages-tags', currentBreakMessages, 'messages');
                 isDarkMode = event.data.isDark;
-                if (isDarkMode) document.body.classList.add('dark');
-                else document.body.classList.remove('dark');
-                
+                if (isDarkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark');
                 window.chrome.webview.postMessage({ action: "get_apps" });
                 updatePreviewFromUI();
-
             } else if (event.data.action === "media_selected") {
                 updatePreview(event.data.path);
             } else if (event.data.action === "theme_changed") {
-                isDarkMode = event.data.isDark;
-                if (isDarkMode) document.body.classList.add('dark');
-                else document.body.classList.remove('dark');
-                updatePreviewFromUI();
+                isDarkMode = event.data.isDark; if (isDarkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark'); updatePreviewFromUI();
             } else if (event.data.action === "apps_list") {
                 const select = document.getElementById('running-apps-select');
                 select.innerHTML = '<option value="">Select app...</option>';
                 event.data.apps.forEach(app => {
-                    const opt = document.createElement('option');
-                    opt.value = app; opt.textContent = app;
-                    select.appendChild(opt);
+                    const opt = document.createElement('option'); opt.value = app; opt.textContent = app; select.appendChild(opt);
                 });
+            } else if (event.data.action === "update_status") {
+                const btn = document.getElementById('check-update-btn');
+                btn.disabled = false; btn.innerText = "Check for Updates";
+                if (event.data.info.available) {
+                    showUpdateModal(event.data.info.latest_version);
+                } else {
+                    showNotification("Up to Date", "PauseCat is already running the latest version.");
+                }
+            } else if (event.data.action === "update_progress") {
+                const progress = event.data.percentage;
+                document.getElementById('update-progress-bar').style.width = progress + "%";
+                document.getElementById('update-progress-label').innerText = `Downloading... ${progress}%`;
+            } else if (event.data.action === "update_error") {
+                const btn = document.getElementById('check-update-btn');
+                btn.disabled = false; btn.innerText = "Check for Updates";
+                hideUpdateModal();
+                showNotification("Update Error", event.data.error);
             }
         });
 
@@ -738,24 +619,14 @@
             const resetBtn = document.getElementById('reset-btn');
             const liveImg = document.getElementById('live-preview-bg-img');
             const liveVid = document.getElementById('live-preview-bg-vid');
-            
             [empty, img, video, liveImg, liveVid].forEach(el => el.classList.add('hidden'));
-
-            if (path === "default.webm") resetBtn.classList.add('hidden');
-            else resetBtn.classList.remove('hidden');
-
-            const formattedPath = (path === "default.webm") 
-                ? "https://pausecat.app/assets/default.webm" 
-                : (path.startsWith('https://') ? path : 'https://pausecat.app/local/' + btoa(path));
-
+            if (path === "default.webm") resetBtn.classList.add('hidden'); else resetBtn.classList.remove('hidden');
+            const formattedPath = (path === "default.webm") ? "https://pausecat.app/assets/default.webm" : (path.startsWith('https://') ? path : 'https://pausecat.app/local/' + btoa(path));
             const ext = path.split('.').pop().toLowerCase();
             if (['mp4', 'webm', 'ogg'].includes(ext)) {
-                video.src = formattedPath; video.classList.remove('hidden');
-                liveVid.src = formattedPath; liveVid.classList.remove('hidden');
-                video.play().catch(() => {});
+                video.src = formattedPath; video.classList.remove('hidden'); liveVid.src = formattedPath; liveVid.classList.remove('hidden'); video.play().catch(() => {});
             } else {
-                img.src = formattedPath; img.classList.remove('hidden');
-                liveImg.src = formattedPath; liveImg.classList.remove('hidden');
+                img.src = formattedPath; img.classList.remove('hidden'); liveImg.src = formattedPath; liveImg.classList.remove('hidden');
             }
         }
     </script>
