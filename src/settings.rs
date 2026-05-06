@@ -92,6 +92,9 @@ impl Settings {
     }
 
     pub fn save(&self) -> Result<(), SettingsError> {
+        let mut settings_to_save = self.clone();
+        settings_to_save.validate();
+
         let dir = Self::get_config_dir();
         if !dir.exists() {
             fs::create_dir_all(&dir)?;
@@ -100,7 +103,7 @@ impl Settings {
         let path = Self::get_config_path();
         let tmp_path = path.with_extension("tmp");
         
-        let json = serde_json::to_string_pretty(self)?;
+        let json = serde_json::to_string_pretty(&settings_to_save)?;
         fs::write(&tmp_path, json)?;
         fs::rename(&tmp_path, &path)?;
 
@@ -110,10 +113,10 @@ impl Settings {
     }
 
     pub fn validate(&mut self) {
-        if self.work_duration_secs < 300 { self.work_duration_secs = 300; }
-        if self.work_duration_secs > 14400 { self.work_duration_secs = 14400; }
-        if self.break_duration_secs < 60 { self.break_duration_secs = 60; }
-        if self.break_duration_secs > 1800 { self.break_duration_secs = 1800; }
+        if self.work_duration_secs < 300 { self.work_duration_secs = 300; } // Min 5m
+        if self.work_duration_secs > 14400 { self.work_duration_secs = 14400; } // Max 4h
+        if self.break_duration_secs < 10 { self.break_duration_secs = 10; } // Min 10s
+        if self.break_duration_secs > 7200 { self.break_duration_secs = 7200; } // Max 2h
         if self.bubble_opacity < 0.0 { self.bubble_opacity = 0.0; }
         if self.bubble_opacity > 1.0 { self.bubble_opacity = 1.0; }
     }
