@@ -32,6 +32,18 @@ pub struct UpdateInfo {
     pub changelog: String,
 }
 
+pub fn parse_and_check_version(release_json: &GithubRelease, current_version: &str) -> Result<UpdateInfo, Box<dyn std::error::Error>> {
+    let latest_ver_str = release_json.tag_name.trim_start_matches('v');
+    let current_ver = Version::parse(current_version)?;
+    let latest_ver = Version::parse(latest_ver_str)?;
+
+    Ok(UpdateInfo {
+        available: latest_ver > current_ver,
+        latest_version: release_json.tag_name.clone(),
+        changelog: release_json.body.clone(),
+    })
+}
+
 pub fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error>> {
     let client = reqwest::blocking::Client::builder()
         .user_agent("PauseCat-Updater-v1")
@@ -52,15 +64,7 @@ pub fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error>> {
     }
 
     let release: GithubRelease = response.json()?;
-    let latest_ver_str = release.tag_name.trim_start_matches('v');
-    let current_ver = Version::parse(APP_VERSION)?;
-    let latest_ver = Version::parse(latest_ver_str)?;
-
-    Ok(UpdateInfo {
-        available: latest_ver > current_ver,
-        latest_version: release.tag_name,
-        changelog: release.body,
-    })
+    parse_and_check_version(&release, APP_VERSION)
 }
 
 pub fn download_and_install(event_tx: Sender<AppEvent>) -> Result<(), Box<dyn std::error::Error>> {

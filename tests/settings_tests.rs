@@ -62,3 +62,25 @@ fn test_settings_io() {
     // Clean up
     fs::remove_dir_all(&config_dir).unwrap();
 }
+
+#[test]
+fn test_settings_corrupted_json() {
+    let config_dir = std::env::current_dir().unwrap().join("test_config_corrupted");
+    if config_dir.exists() {
+        fs::remove_dir_all(&config_dir).unwrap();
+    }
+    fs::create_dir_all(&config_dir).unwrap();
+    
+    let config_path = config_dir.join("config.json");
+    fs::write(&config_path, "{ \"invalid\": \"json\" ...").unwrap(); // Corrupted JSON
+    
+    // We can't directly use Settings::load() because it uses a hardcoded path.
+    // However, we can test the internal logic by mimicking the load behavior.
+    let result = fs::read_to_string(&config_path)
+        .and_then(|s| serde_json::from_str::<Settings>(&s).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e)))
+        .unwrap_or_else(|_| Settings::default());
+    
+    assert_eq!(result.work_duration_secs, Settings::default().work_duration_secs);
+    
+    fs::remove_dir_all(&config_dir).unwrap();
+}
