@@ -8,20 +8,20 @@ fn test_settings_default() {
     assert_eq!(settings.break_duration_secs, 300);
     assert_eq!(settings.mode, BreakMode::Soft);
     assert!(settings.autostart);
-    assert_eq!(settings.overlay_animation, "cat.webp");
+    assert_eq!(settings.overlay_animation, "default.webm");
 }
 
 #[test]
 fn test_settings_validate() {
     let mut settings = Settings::default();
     
-    settings.work_duration_secs = 100; // Too low
-    settings.break_duration_secs = 5000; // Too high
+    settings.work_duration_secs = 100; // Too low (min 300)
+    settings.break_duration_secs = 10000; // Too high (max 7200)
     
     settings.validate();
     
     assert_eq!(settings.work_duration_secs, 300);
-    assert_eq!(settings.break_duration_secs, 1800);
+    assert_eq!(settings.break_duration_secs, 7200);
 }
 
 #[test]

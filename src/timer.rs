@@ -9,13 +9,14 @@ use crate::overlay::{capture, blur};
 use crate::system;
 
 pub fn sleep_interruptible(duration: Duration, paused: &AtomicBool) {
-    let start = Instant::now();
-    while start.elapsed() < duration {
+    let mut elapsed = Duration::from_millis(0);
+    while elapsed < duration {
         if paused.load(Ordering::Relaxed) {
-            thread::sleep(Duration::from_millis(100));
+            thread::sleep(Duration::from_millis(50));
             continue;
         }
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(50));
+        elapsed += Duration::from_millis(50);
     }
 }
 
