@@ -1,69 +1,74 @@
-# 🐾 PauseCat
+<div align="center">
+  <img src="assets/pauseCat-banner.jpeg" alt="PauseCat Banner" width="80%">
 
-**The Professional Break Reminder for Windows.**
+  # 🐾 PauseCat
+  **The High-Performance, SaaS-Grade Break Reminder for Windows.**
+  [![Status](https://img.shields.io/badge/Status-Active%20Development-000000.svg?style=for-the-badge&logo=rocket&logoColor=white&labelColor=000000&color=000000)](https://github.com/0xarchit/pauseCat/pulse)
+  [![License](https://img.shields.io/badge/License-Apache%202.0-000000.svg?style=for-the-badge&logo=apache&logoColor=white&labelColor=000000&color=000000)](LICENSE)
+  [![Rust](https://img.shields.io/badge/Rust-1.94+-000000.svg?style=for-the-badge&logo=rust&logoColor=white&labelColor=000000&color=000000)](https://rust-lang.org)
 
-PauseCat is a high-performance, lightweight Windows background application designed to reduce computer fatigue and improve productivity by encouraging periodic breaks. It provides a full-screen immersive reminder experience with beautiful glassmorphism visuals and intelligent system integration.
+  ---
+</div>
 
-[![Status](https://img.shields.io/badge/Status-Active%20Development-000000.svg?style=for-the-badge&logo=rocket&logoColor=white&labelColor=000000&color=000000)](https://github.com/0xarchit/pauseCat/pulse)
-[![License](https://img.shields.io/badge/License-Apache%202.0-000000.svg?style=for-the-badge&logo=apache&logoColor=white&labelColor=000000&color=000000)](LICENSE)
-[![Rust](https://img.shields.io/badge/Rust-1.75+-000000.svg?style=for-the-badge&logo=rust&logoColor=white&labelColor=000000&color=000000)](https://rust-lang.org)
+## 🌟 Overview
 
----
+PauseCat is more than just a timer. It's a professional-grade Windows utility engineered in **Rust** and powered by **WebView2** to provide a seamless, non-intrusive break experience. Designed for high-performance workstations, it ensures you stay healthy without interrupting your flow with clunky or flickering overlays.
 
-## ✨ Features
-
-- **🚀 Zero-Lag Overlay:** Uses advanced pre-capture and pre-blur technology to trigger break reminders instantly with no white flicker.
-- **💎 Glassmorphism UI:** Stunning, translucent UI bubble with smooth floating animations and Inter typography.
-- **🎵 Smart Media Control:** Automatically pauses your music (Spotify, YouTube, etc.) when a break starts and resumes it when you're done.
-- **⚙️ Fluent Settings:** Native-feeling configuration panel to customize work/break durations, break mode (Soft/Hard), and auto-start.
-- **🎨 Custom Media:** Support for user-selected images, videos (WebM/MP4), and GIFs for the break background.
-- **📦 Tiny Footprint:** Optimized Rust binary (~1.2 MB) with shared WebView2 environments for low RAM usage.
-- **🛡️ Secure & Private:** All settings and logs are stored locally in `%APPDATA%`. No data ever leaves your machine.
-
----
-
-## 🛠 Installation
-
-1. Download the latest `pausecat_installer.msi` from the [Releases](https://github.com/0xarchit/pauseCat/releases) page.
-2. Run the installer and follow the professional wizard.
-3. (Optional) Check "Launch PauseCat now" to start your first session immediately.
+<div align="center">
+  <img src="assets/pauseCat-break.png" alt="PauseCat Break Interface" width="60%">
+  <br>
+  <em>The immersive, glassmorphic break interface.</em>
+</div>
 
 ---
 
-## 💻 Development
+## 🚀 Key Features
 
-### Prerequisites
-- [Rust](https://rustup.rs/) (Stable)
-- [WiX Toolset v4/v7](https://wixtoolset.org/) (for building the installer)
-- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
+### 💎 Elite Visuals & UX
+- **Ultra-Fast Overlay:** Advanced pre-capture and Gaussian blur engine ensures reminders trigger with zero lag and no white flicker.
+- **Pro Designer UI:** Precision sliders for bubble size, glass translucency, and positioning with real-time live preview.
+- **Hardened Native UX:** 100% protection against accidental zoom gestures and hidden native scrollbars for a pure application feel.
 
-### Build the Optimized Binary
+### 🧠 Intelligent Logic
+- **Smart Session Guard:** Native awareness of Windows Lock (Win+L) and System Sleep states. The timer pauses and resumes exactly when you are at your desk.
+- **Intelligent Media Sync:** Native SMTC integration detects if music/video is playing and only pauses/resumes your media if it was active before the break.
+
+### 🛠️ Engineering Excellence
+- **Lightweight Footprint:** Optimized Rust binary (< 2.5 MB) with shared WebView2 environments for professional resource management.
+- **Auto-Update Cycle:** Fully automated self-update system that downloads, installs, and relaunches the application from GitHub Releases.
+- **Security First:** Automated CodeQL v4 scanning and pinned GitHub Actions for total supply-chain security.
+
+---
+
+## 💻 Development Workflow
+
+### 🛠 Build Standards
+To achieve the optimal binary size and performance, always use the following MSVC linker flags:
 ```powershell
 $env:RUSTFLAGS="-C link-arg=/OPT:REF -C link-arg=/OPT:ICF"
 cargo build --release
 ```
 
-### Build the Professional Installer
-```powershell
-wix build wix\main.wxs -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -o target\release\pausecat_installer.msi
-```
+### 🌿 Git Policy
+- **Feature Isolation:** One branch per feature: `feature/<description>` or `fix/<description>`.
+- **Conventional Commits:** Use `feat:`, `fix:`, `refactor:`, `chore:`, `test:`.
+- **Main is Read-Only:** Never commit directly to `main`.
+
+---
+
+## 🏗 Installation
+
+1. Download the latest `PauseCat_Installer.msi` from the [Releases](https://github.com/0xarchit/pauseCat/releases) page.
+2. The WiX installer handles everything: installation, autostart registry, and WebView2 runtime checks.
+3. Once installed, PauseCat lives in your **System Tray**.
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for details on how to get started.
-
-## 🛡 Security
-
-If you discover a security vulnerability, please refer to our [SECURITY.md](.github/SECURITY.md).
-
-## 📄 License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-### Acknowledgements
-The `assets/default.webm` file included in this project was sourced from the internet. It is intended for demonstration purposes only and is not intended to infringe upon any existing copyrights. If you are the owner of this content and wish to have it removed or credited differently, please contact us.
+We welcome contributions! Please see our [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for details.
 
 ---
-*Built with ❤️ in Rust for a healthier digital life.*
+<div align="center">
+  Built with ❤️ in Rust for a healthier digital life.
+</div>
