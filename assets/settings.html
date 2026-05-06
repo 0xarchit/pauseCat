@@ -286,10 +286,10 @@
             <div class="setting-row">
                 <div class="setting-info">
                     <span class="setting-label">Break Duration</span>
-                    <span class="setting-description">Minutes break lasts</span>
+                    <span class="setting-description">Minutes break lasts (Max 120)</span>
                 </div>
                 <div class="control">
-                    <input type="number" id="break_duration" min="1" max="30" step="1">
+                    <input type="number" id="break_duration" min="1" max="120" step="1" oninput="validateBreakDuration()">
                 </div>
             </div>
         </div>
@@ -520,6 +520,18 @@
             }
         };
 
+        function validateBreakDuration() {
+            const input = document.getElementById('break_duration');
+            const val = parseInt(input.value);
+            if (val > 120) {
+                input.style.borderColor = 'var(--danger-text)';
+                input.style.boxShadow = '0 0 0 3px var(--danger-border)';
+            } else {
+                input.style.borderColor = 'var(--border)';
+                input.style.boxShadow = 'none';
+            }
+        }
+
         function updatePreviewFromUI() {
             const bubble = document.getElementById('live-preview-bubble');
             const opacity = parseFloat(document.getElementById('bubble_opacity').value);
@@ -541,9 +553,22 @@
         }
 
         function save() {
+            const workDuration = parseInt(document.getElementById('work_duration').value);
+            const breakDuration = parseInt(document.getElementById('break_duration').value);
+
+            if (breakDuration > 120) {
+                showNotification("Invalid Duration", "Break duration cannot exceed 120 minutes (2 hours).");
+                return;
+            }
+
+            if (workDuration > 240) {
+                showNotification("Invalid Duration", "Work duration cannot exceed 240 minutes (4 hours).");
+                return;
+            }
+
             const settings = {
-                work_duration_secs: document.getElementById('work_duration').value * 60,
-                break_duration_secs: document.getElementById('break_duration').value * 60,
+                work_duration_secs: workDuration * 60,
+                break_duration_secs: breakDuration * 60,
                 mode: document.getElementById('mode').value,
                 autostart: document.getElementById('autostart').checked,
                 overlay_animation: currentMediaPath || "default.webm",
