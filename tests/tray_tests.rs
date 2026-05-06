@@ -3,7 +3,6 @@ mod tests {
     use pausecat::tray::TrayIcon;
     use pausecat::events::AppEvent;
     use std::sync::mpsc;
-    use windows::Win32::Foundation::HWND;
 
     #[test]
     fn test_tray_icon_lifecycle() {

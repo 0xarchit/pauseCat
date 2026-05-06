@@ -4,7 +4,6 @@ mod tests {
     use pausecat::events::AppEvent;
     use pausecat::settings::Settings;
     use std::sync::mpsc;
-    use windows::Win32::Foundation::HWND;
 
     #[test]
     fn test_overlay_window_lifecycle() {

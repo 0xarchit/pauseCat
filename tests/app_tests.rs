@@ -4,7 +4,6 @@ mod tests {
     use pausecat::events::AppEvent;
     use pausecat::settings::Settings;
     use std::sync::atomic::Ordering;
-    use std::time::Duration;
 
     #[test]
     fn test_app_state_toggle_pause() {
