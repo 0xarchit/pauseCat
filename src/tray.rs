@@ -258,12 +258,15 @@ mod internal_tests {
             // Test WM_SETTINGCHANGE (theme change)
             wnd_proc(hwnd, WM_SETTINGCHANGE, WPARAM(0), LPARAM(0));
             
-            // Test WM_WTSSESSION_CHANGE (lock/unlock)
-            wnd_proc(hwnd, WM_WTSSESSION_CHANGE, WPARAM(WTS_SESSION_LOCK as usize), LPARAM(0));
-            wnd_proc(hwnd, WM_WTSSESSION_CHANGE, WPARAM(WTS_SESSION_UNLOCK as usize), LPARAM(0));
+            // Test all session change variants
+            for code in [WTS_SESSION_LOCK, WTS_SESSION_UNLOCK, WTS_SESSION_LOGON, WTS_SESSION_LOGOFF, WTS_REMOTE_CONNECT, WTS_REMOTE_DISCONNECT] {
+                wnd_proc(hwnd, WM_WTSSESSION_CHANGE, WPARAM(code as usize), LPARAM(0));
+            }
             
-            // Test WM_POWERBROADCAST (resume)
-            wnd_proc(hwnd, WM_POWERBROADCAST, WPARAM(PBT_APMRESUMESUSPEND as usize), LPARAM(0));
+            // Test all power broadcast variants
+            for code in [PBT_APMRESUMESUSPEND, PBT_APMRESUMEAUTOMATIC, PBT_APMQUERYSUSPEND, PBT_APMSUSPEND] {
+                wnd_proc(hwnd, WM_POWERBROADCAST, WPARAM(code as usize), LPARAM(0));
+            }
             
             // Test WM_TRAY_ICON (right click)
             wnd_proc(hwnd, WM_TRAY_ICON, WPARAM(0), LPARAM(WM_RBUTTONUP as isize));
@@ -272,9 +275,13 @@ mod internal_tests {
             wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_PAUSE), LPARAM(0));
             wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_SETTINGS), LPARAM(0));
             wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_EXIT), LPARAM(0));
+            wnd_proc(hwnd, WM_COMMAND, WPARAM(9999), LPARAM(0));
 
             // Test default path
             wnd_proc(hwnd, WM_USER, WPARAM(0), LPARAM(0));
+            
+            // Test with NULL HWND to ensure no crash
+            wnd_proc(HWND(std::ptr::null_mut()), WM_SETTINGCHANGE, WPARAM(0), LPARAM(0));
 
             // Clean up
             let _ = Box::from_raw(tx_box);

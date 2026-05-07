@@ -274,4 +274,27 @@ mod internal_tests {
         app.event_tx.send(AppEvent::UserDismissed).unwrap();
         app.drain_events();
     }
+
+    #[test]
+    fn test_app_window_management_logic() {
+        let mut app = App::new();
+        
+        // Test overlay closing logic
+        use windows::Win32::Foundation::HWND;
+        use crate::overlay::OverlayWindow;
+        app.reminder_overlay = Some(OverlayWindow { hwnd: HWND(1 as *mut _) });
+        app.handle_event(AppEvent::HideOverlay);
+        assert!(app.reminder_overlay.is_none());
+
+        // Test settings window closing logic
+        use crate::settings_ui::SettingsWindow;
+        app.settings_window = Some(SettingsWindow { hwnd: HWND(1 as *mut _) });
+        app.handle_event(AppEvent::SettingsClosed);
+        assert!(app.settings_window.is_none());
+        
+        // Test session events with dummy windows
+        app.settings_window = Some(SettingsWindow { hwnd: HWND(1 as *mut _) });
+        app.handle_event(AppEvent::SessionLocked);
+        app.handle_event(AppEvent::SessionUnlocked);
+    }
 }

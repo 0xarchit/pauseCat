@@ -34,8 +34,6 @@ where F: FnOnce(&str), P: FnOnce() -> Option<String> {
             if let Ok(new_settings) = serde_json::from_value::<Settings>(data["settings"].clone()) {
                 let _ = sender.send(AppEvent::ConfigChanged(new_settings));
                 let _ = sender.send(AppEvent::SettingsClosed); 
-            } else {
-                log::error!("Failed to parse Settings from JSON");
             }
         }
     } else if json.contains("\"action\":\"close\"") {
@@ -43,16 +41,14 @@ where F: FnOnce(&str), P: FnOnce() -> Option<String> {
     } else if json.contains("\"action\":\"get_apps\"") {
         let apps = crate::system::get_running_apps();
         let apps_json = serde_json::to_string(&apps).unwrap_or_default();
-        let msg = format!("{{\"action\":\"apps_list\", \"apps\": {}}}", apps_json);
-        post_message(&msg);
+        post_message(&format!("{{\"action\":\"apps_list\", \"apps\": {}}}", apps_json));
     } else if json.contains("\"action\":\"check_updates\"") {
         let _ = sender.send(AppEvent::CheckForUpdates);
     } else if json.contains("\"action\":\"start_update\"") {
         let _ = sender.send(AppEvent::StartUpdate);
     } else if json.contains("\"action\":\"select_media\"") {
         if let Some(path) = pick_file_fn() {
-            let msg = format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path.replace('\\', "/"));
-            post_message(&msg);
+            post_message(&format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path.replace('\\', "/")));
         }
     }
 }
@@ -69,13 +65,6 @@ pub fn build_update_progress_msg(percentage: u32) -> String {
 pub fn build_update_error_msg(error: &str) -> String {
     format!("{{\"action\":\"update_error\", \"error\": \"{}\"}}", error.replace('"', "\\\""))
 }
-
-const ANTI_ZOOM_SCRIPT: &str = "
-    window.addEventListener('wheel', function(e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
-    window.addEventListener('keydown', function(e) { if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '0' || e.key === '=')) e.preventDefault(); });
-    document.addEventListener('touchstart', function(e) { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-    document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
-";
 
 pub fn on_controller_completed(
     result: windows::core::Result<()>, 
@@ -135,12 +124,7 @@ impl SettingsWindow {
                             if let Some(safe_controller) = lock.get(&(hwnd.0 as isize)) {
                                 let webview = safe_controller.0.CoreWebView2()?;
                                 let ws = webview.Settings()?;
-                                let _ = ws.SetIsWebMessageEnabled(true);
-                                let _ = ws.SetAreDefaultContextMenusEnabled(false);
-                                let _ = ws.SetAreDevToolsEnabled(false);
-                                let _ = ws.SetIsZoomControlEnabled(false);
-                                let _ = ws.SetIsStatusBarEnabled(false);
-                                let _ = webview.AddScriptToExecuteOnDocumentCreated(&HSTRING::from(ANTI_ZOOM_SCRIPT), None);
+                                let _ = (ws.SetIsWebMessageEnabled(true), ws.SetAreDefaultContextMenusEnabled(false), ws.SetAreDevToolsEnabled(false), ws.SetIsZoomControlEnabled(false), ws.SetIsStatusBarEnabled(false));
                                 let assets_path = webview_env::get_assets_path();
                                 let env_res = env_inner.clone();
                                 let _ = webview.AddWebResourceRequestedFilter(w!("https://pausecat.app/*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
@@ -152,8 +136,7 @@ impl SettingsWindow {
                                         let uri = uri_ptr.to_string().unwrap_or_default();
                                         if let Some((content, mime)) = crate::overlay::webview::handle_resource_request(&uri, &assets_path) {
                                             let stream = CreateStreamOnHGlobal(HGLOBAL(std::ptr::null_mut()), true)?;
-                                            let _ = stream.Write(content.as_ptr() as *const _, content.len() as u32, None);
-                                            let _ = stream.Seek(0, STREAM_SEEK_SET, None);
+                                            let _ = (stream.Write(content.as_ptr() as *const _, content.len() as u32, None), stream.Seek(0, STREAM_SEEK_SET, None));
                                             let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(format!("Content-Type: {}\r\n", mime)))?;
                                             let _ = args.SetResponse(&response);
                                         }
@@ -229,8 +212,7 @@ unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM
             if let Ok(lock) = CONTROLLERS.lock() {
                 if let Some(safe_controller) = lock.get(&(hwnd.0 as isize)) {
                     let mut rect = RECT::default();
-                    let _ = GetClientRect(hwnd, &mut rect);
-                    let _ = safe_controller.0.SetBounds(rect);
+                    let _ = (GetClientRect(hwnd, &mut rect), safe_controller.0.SetBounds(rect));
                 }
             }
             LRESULT(0)

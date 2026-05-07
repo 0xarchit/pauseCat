@@ -152,6 +152,14 @@ mod internal_tests {
         let s = Settings::default();
         let _ = s.force_save_error_test();
         
+        // Sabotage JSON loading
+        let config_dir = Settings::get_config_dir();
+        let path = config_dir.join("config.json");
+        let _ = std::fs::write(&path, "invalid json {");
+        let s_bad = Settings::load();
+        // Should fallback to default
+        assert_eq!(s_bad.work_duration_secs, Settings::default().work_duration_secs);
+
         let mut s2 = Settings::default();
         s2.work_duration_secs = 10;
         s2.validate();
