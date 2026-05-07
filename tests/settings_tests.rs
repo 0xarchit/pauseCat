@@ -84,3 +84,36 @@ fn test_settings_corrupted_json() {
     
     fs::remove_dir_all(&config_dir).unwrap();
 }
+
+#[test]
+fn test_settings_save_error_branch() {
+    let settings = Settings::default();
+    let result = settings.force_save_error_test();
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_settings_autostart_logic() {
+    let mut settings = Settings::default();
+    settings.autostart = true;
+    let _ = settings.update_autostart();
+    settings.autostart = false;
+    let _ = settings.update_autostart();
+}
+
+#[test]
+fn test_settings_load_not_exists() {
+    let path = Settings::get_config_path();
+    // Ensure file doesn't exist
+    if path.exists() {
+        let _ = fs::rename(&path, path.with_extension("bak"));
+    }
+    
+    let settings = Settings::load();
+    assert_eq!(settings.work_duration_secs, Settings::default().work_duration_secs);
+    
+    // Restore backup
+    if path.with_extension("bak").exists() {
+        let _ = fs::rename(path.with_extension("bak"), &path);
+    }
+}

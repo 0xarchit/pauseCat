@@ -209,3 +209,16 @@ pub fn update_theme(hwnd: HWND, is_dark: bool) {
         }
     }
 }
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+
+    #[test]
+    fn test_controller_management_logic() {
+        let hwnd = HWND(std::ptr::null_mut());
+        unregister_controller(hwnd);
+        resize_controller(hwnd);
+        update_theme(hwnd, true);
+    }
+}

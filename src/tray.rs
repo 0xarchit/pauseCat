@@ -234,3 +234,50 @@ unsafe fn show_context_menu(hwnd: HWND) {
     let _ = PostMessageW(Some(hwnd), WM_NULL, WPARAM(0), LPARAM(0));
     let _ = DestroyMenu(menu);
 }
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+    use std::sync::mpsc;
+
+    #[test]
+    fn test_wnd_proc_branches() {
+        let (tx, _rx) = mpsc::channel::<AppEvent>();
+        let tx_box = Box::into_raw(Box::new(tx));
+        
+        unsafe {
+            let hwnd = HWND(std::ptr::null_mut());
+            
+            // Test WM_CREATE (sets up sender)
+            let cs = CREATESTRUCTW {
+                lpCreateParams: tx_box as *mut _,
+                ..Default::default()
+            };
+            wnd_proc(hwnd, WM_CREATE, WPARAM(0), LPARAM(&cs as *const _ as isize));
+            
+            // Test WM_SETTINGCHANGE (theme change)
+            wnd_proc(hwnd, WM_SETTINGCHANGE, WPARAM(0), LPARAM(0));
+            
+            // Test WM_WTSSESSION_CHANGE (lock/unlock)
+            wnd_proc(hwnd, WM_WTSSESSION_CHANGE, WPARAM(WTS_SESSION_LOCK as usize), LPARAM(0));
+            wnd_proc(hwnd, WM_WTSSESSION_CHANGE, WPARAM(WTS_SESSION_UNLOCK as usize), LPARAM(0));
+            
+            // Test WM_POWERBROADCAST (resume)
+            wnd_proc(hwnd, WM_POWERBROADCAST, WPARAM(PBT_APMRESUMESUSPEND as usize), LPARAM(0));
+            
+            // Test WM_TRAY_ICON (right click)
+            wnd_proc(hwnd, WM_TRAY_ICON, WPARAM(0), LPARAM(WM_RBUTTONUP as isize));
+            
+            // Test WM_COMMAND (menu items)
+            wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_PAUSE), LPARAM(0));
+            wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_SETTINGS), LPARAM(0));
+            wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_EXIT), LPARAM(0));
+
+            // Test default path
+            wnd_proc(hwnd, WM_USER, WPARAM(0), LPARAM(0));
+
+            // Clean up
+            let _ = Box::from_raw(tx_box);
+        }
+    }
+}

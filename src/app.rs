@@ -231,3 +231,35 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+
+    #[test]
+    fn test_app_logic_methods() {
+        let mut app = App::new();
+        
+        // Test media logic (smoke)
+        app.pause_media();
+        app.resume_media();
+        
+        // Test handle_event with variants that don't trigger real UI popups
+        app.handle_event(AppEvent::TogglePause);
+        app.handle_event(AppEvent::SettingsClosed);
+        app.handle_event(AppEvent::SessionLocked);
+        app.handle_event(AppEvent::SessionUnlocked);
+        app.handle_event(AppEvent::ThemeChanged(true));
+        app.handle_event(AppEvent::CheckForUpdates);
+        app.handle_event(AppEvent::StartUpdate);
+        app.handle_event(AppEvent::UserDismissed);
+        app.handle_event(AppEvent::HideOverlay);
+        app.handle_event(AppEvent::UpdateStatus(crate::updater::UpdateInfo { available: true, latest_version: "1.1.0".to_string(), changelog: "test".to_string() }));
+        app.handle_event(AppEvent::UpdateProgress(50));
+        app.handle_event(AppEvent::UpdateError("error".to_string()));
+        
+        // Test draining
+        app.event_tx.send(AppEvent::UserDismissed).unwrap();
+        app.drain_events();
+    }
+}

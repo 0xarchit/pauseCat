@@ -67,14 +67,18 @@ pub fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error>> {
     parse_and_check_version(&release, APP_VERSION)
 }
 
+pub fn find_msi_asset(release: &GithubRelease) -> Option<&GithubAsset> {
+    release.assets.iter()
+        .find(|a| a.name.to_lowercase().ends_with(".msi"))
+}
+
 pub fn download_and_install(event_tx: Sender<AppEvent>) -> Result<(), Box<dyn std::error::Error>> {
     let client = reqwest::blocking::Client::builder()
         .user_agent("PauseCat-Updater-v1")
         .build()?;
 
     let release: GithubRelease = client.get(GITHUB_API_URL).send()?.json()?;
-    let asset = release.assets.iter()
-        .find(|a| a.name.to_lowercase().ends_with(".msi"))
+    let asset = find_msi_asset(&release)
         .ok_or("No MSI installer found in the latest release")?;
 
     let mut update_dir = Settings::get_config_dir();

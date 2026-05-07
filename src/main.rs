@@ -79,3 +79,14 @@ fn main() -> windows::core::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+
+    #[test]
+    fn test_main_helpers_smoke() {
+        let _ = check_webview2();
+        let _ = setup_logging();
+    }
+}

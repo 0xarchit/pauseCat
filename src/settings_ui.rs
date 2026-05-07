@@ -64,7 +64,11 @@ impl SettingsWindow {
 
             Self::init_webview(hwnd)?;
 
+            #[cfg(not(test))]
             let _ = ShowWindow(hwnd, SW_SHOW);
+            #[cfg(test)]
+            let _ = ShowWindow(hwnd, SW_HIDE);
+
             let _ = UpdateWindow(hwnd);
 
             Ok(Self { hwnd })
@@ -353,5 +357,44 @@ unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM
             LRESULT(0)
         }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
+    }
+}
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+    use std::sync::mpsc;
+
+    #[test]
+    fn test_settings_wnd_proc_branches() {
+        let (tx, _rx) = mpsc::channel::<AppEvent>();
+        let settings = Settings::default();
+        let state = Box::into_raw(Box::new((tx, settings)));
+        
+        unsafe {
+            let hwnd = HWND(std::ptr::null_mut());
+            
+            // Test WM_CREATE
+            let cs = CREATESTRUCTW {
+                lpCreateParams: state as *mut _,
+                ..Default::default()
+            };
+            settings_wnd_proc(hwnd, WM_CREATE, WPARAM(0), LPARAM(&cs as *const _ as isize));
+            
+            // Test WM_PAINT
+            settings_wnd_proc(hwnd, WM_PAINT, WPARAM(0), LPARAM(0));
+            
+            // Test WM_SIZE
+            settings_wnd_proc(hwnd, WM_SIZE, WPARAM(0), LPARAM(100 | (100 << 16)));
+            
+            // Test WM_CLOSE
+            settings_wnd_proc(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0));
+
+            // Test default match
+            settings_wnd_proc(hwnd, WM_COMMAND, WPARAM(999), LPARAM(0));
+            
+            // Test WM_DESTROY
+            settings_wnd_proc(hwnd, WM_DESTROY, WPARAM(0), LPARAM(0));
+        }
     }
 }

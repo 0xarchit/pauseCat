@@ -24,4 +24,32 @@ mod tests {
             assert!(!n.is_empty());
         }
     }
+
+    #[test]
+    fn test_apply_immersive_dark_mode_smoke() {
+        use windows::Win32::UI::WindowsAndMessaging::{CreateWindowExW, WINDOW_EX_STYLE, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, DestroyWindow};
+        use windows::core::w;
+        
+        unsafe {
+            let hwnd = CreateWindowExW(
+                WINDOW_EX_STYLE::default(),
+                w!("Static"),
+                w!("Test"),
+                WS_OVERLAPPEDWINDOW,
+                CW_USEDEFAULT, CW_USEDEFAULT, 10, 10,
+                None, None, None, None
+            ).unwrap();
+            
+            system::apply_immersive_dark_mode(hwnd, true);
+            system::apply_immersive_dark_mode(hwnd, false);
+            
+            let _ = DestroyWindow(hwnd);
+        }
+    }
+
+    #[test]
+    fn test_tray_menu_theme_smoke() {
+        system::set_tray_menu_theme(true);
+        system::set_tray_menu_theme(false);
+    }
 }
