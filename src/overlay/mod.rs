@@ -188,7 +188,9 @@ mod internal_tests {
         let blurred_data = vec![0u8; 100];
         let settings = Settings::default();
         
-        // This will likely fail to create a real HWND but hits some lines
-        let _ = OverlayWindow::new(tx, 10, 10, blurred_data, settings);
+        if let Ok(overlay) = OverlayWindow::new(tx, 10, 10, blurred_data, settings) {
+            overlay.fade_in();
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
     }
 }

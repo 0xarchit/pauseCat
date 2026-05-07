@@ -31,8 +31,16 @@ fn check_webview2() -> windows::core::Result<bool> {
     unsafe {
         let mut version = windows::core::PWSTR::null();
         let result = GetAvailableCoreWebView2BrowserVersionString(windows::core::PCWSTR::null(), &mut version);
-        Ok(result.is_ok())
+        let exists = result.is_ok();
+        if !version.is_null() {
+            windows::Win32::System::Com::CoTaskMemFree(Some(version.0 as *const _));
+        }
+        Ok(exists)
     }
+}
+
+pub fn is_settings_mode() -> bool {
+    std::env::args().any(|arg| arg == "--settings")
 }
 
 fn main() -> windows::core::Result<()> {
@@ -66,6 +74,10 @@ fn main() -> windows::core::Result<()> {
         return Err(e);
     }
 
+    if is_settings_mode() {
+        app.handle_event(pausecat::events::AppEvent::OpenSettings);
+    }
+
     unsafe {
         let _ = SetTimer(None, 1, 100, None);
 
@@ -88,5 +100,18 @@ mod internal_tests {
     fn test_main_helpers_smoke() {
         let _ = check_webview2();
         let _ = setup_logging();
+        
+        // Mock args for is_settings_mode
+        let _ = is_settings_mode();
+    }
+    
+    #[test]
+    fn test_mutex_logic_smoke() {
+        unsafe {
+            use windows::Win32::System::Threading::CreateMutexW;
+            let mutex_name = windows::core::w!("Global\\PauseCatTestMutex");
+            let _ = CreateMutexW(None, true, mutex_name);
+            let _ = GetLastError();
+        }
     }
 }

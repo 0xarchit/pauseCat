@@ -44,6 +44,10 @@ pub fn parse_and_check_version(release_json: &GithubRelease, current_version: &s
     })
 }
 
+pub fn parse_github_release(json: &str) -> Result<GithubRelease, Box<dyn std::error::Error>> {
+    serde_json::from_str(json).map_err(|e| e.into())
+}
+
 pub fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error>> {
     let client = reqwest::blocking::Client::builder()
         .user_agent("PauseCat-Updater-v1")
@@ -142,7 +146,10 @@ pub fn download_and_install(event_tx: Sender<AppEvent>) -> Result<(), Box<dyn st
         );
     }
 
+    #[cfg(not(test))]
     std::process::exit(0);
+    #[cfg(test)]
+    Ok(())
 }
 
 pub fn cleanup_updates() {
@@ -150,5 +157,49 @@ pub fn cleanup_updates() {
     update_dir.push("Updates");
     if update_dir.exists() {
         let _ = fs::remove_dir_all(&update_dir);
+    }
+}
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+
+    #[test]
+    fn test_github_release_parsing_logic() {
+        let json = r#"{
+            "tag_name": "v1.2.0",
+            "body": "New version",
+            "assets": [
+                {"name": "pausecat.msi", "browser_download_url": "http://test.com/msi", "size": 1000},
+                {"name": "readme.txt", "browser_download_url": "http://test.com/txt", "size": 500}
+            ]
+        }"#;
+        
+        let release = parse_github_release(json).unwrap();
+        assert_eq!(release.tag_name, "v1.2.0");
+        assert_eq!(release.assets.len(), 2);
+        
+        let info = parse_and_check_version(&release, "1.1.0").unwrap();
+        assert!(info.available);
+        assert_eq!(info.latest_version, "v1.2.0");
+        
+        let msi = find_msi_asset(&release).unwrap();
+        assert_eq!(msi.name, "pausecat.msi");
+    }
+
+    #[test]
+    fn test_no_update_available_logic() {
+        let release = GithubRelease {
+            tag_name: "v1.0.0".to_string(),
+            body: "No changes".to_string(),
+            assets: vec![],
+        };
+        let info = parse_and_check_version(&release, "1.0.0").unwrap();
+        assert!(!info.available);
+    }
+
+    #[test]
+    fn test_cleanup_updates_smoke() {
+        cleanup_updates();
     }
 }

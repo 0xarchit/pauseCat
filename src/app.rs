@@ -250,14 +250,26 @@ mod internal_tests {
         app.handle_event(AppEvent::SessionLocked);
         app.handle_event(AppEvent::SessionUnlocked);
         app.handle_event(AppEvent::ThemeChanged(true));
-        app.handle_event(AppEvent::CheckForUpdates);
-        app.handle_event(AppEvent::StartUpdate);
         app.handle_event(AppEvent::UserDismissed);
         app.handle_event(AppEvent::HideOverlay);
         app.handle_event(AppEvent::UpdateStatus(crate::updater::UpdateInfo { available: true, latest_version: "1.1.0".to_string(), changelog: "test".to_string() }));
         app.handle_event(AppEvent::UpdateProgress(50));
         app.handle_event(AppEvent::UpdateError("error".to_string()));
+        app.handle_event(AppEvent::ConfigChanged(Settings::default()));
+        app.handle_event(AppEvent::ShowOverlay);
+        app.handle_event(AppEvent::OpenSettings);
+        app.handle_event(AppEvent::CheckForUpdates);
+        app.handle_event(AppEvent::StartUpdate);
+        app.handle_event(AppEvent::Quit);
         
+        // Test media logic with mock-ish calls
+        app.pause_media();
+        app.resume_media();
+
+        // Test init (smoke)
+        // Now safe because windows are hidden in tests
+        let _ = app.init();
+
         // Test draining
         app.event_tx.send(AppEvent::UserDismissed).unwrap();
         app.drain_events();
