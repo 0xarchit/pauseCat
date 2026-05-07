@@ -1,0 +1,43 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ main, feature/* ]
+
+jobs:
+  coverage:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Install Tarpaulin
+        run: cargo install cargo-tarpaulin
+        
+      - name: Generate Coverage
+        run: |
+          $out = cargo tarpaulin --ignore-tests --out stdout
+          $percent = ($out | Select-String -Pattern "(\d+\.\d+)% coverage").Matches.Groups[1].Value
+          if (-not $percent) {
+              $percent = ($out | Select-String -Pattern "(\d+)% coverage").Matches.Groups[1].Value
+          }
+          echo "COVERAGE_PERCENT=$percent" >> $env:GITHUB_ENV
+        
+      - name: Update README Badge
+        run: |
+          $percent = $env:COVERAGE_PERCENT
+          $readme = Get-Content README.md -Raw
+          $new_readme = $readme -replace 'Coverage-\d+(\.\d+)?%25', "Coverage-$percent%25"
+          Set-Content README.md $new_readme
+          
+      - name: Commit Badge Update
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: update coverage badge to $env:COVERAGE_PERCENT%" || exit 0
+          git push
