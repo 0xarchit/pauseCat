@@ -74,3 +74,4 @@ We welcome contributions! Please see our [CONTRIBUTING.md](.github/CONTRIBUTING.
   Built with ❤️ in Rust for a healthier digital life.
 </div>
 
+
