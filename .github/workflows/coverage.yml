@@ -22,7 +22,7 @@ jobs:
 
       - name: Generate Coverage
         run: |
-          $out = cargo tarpaulin --ignore-tests --out stdout
+          $out = cargo tarpaulin --out stdout
           $percent = ($out | Select-String -Pattern "(\d+\.\d+)% coverage").Matches.Groups[1].Value
           if (-not $percent) {
               $percent = ($out | Select-String -Pattern "(\d+)% coverage").Matches.Groups[1].Value
