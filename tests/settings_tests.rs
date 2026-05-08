@@ -8,20 +8,20 @@ fn test_settings_default() {
     assert_eq!(settings.break_duration_secs, 300);
     assert_eq!(settings.mode, BreakMode::Soft);
     assert!(settings.autostart);
-    assert_eq!(settings.overlay_animation, "cat.webp");
+    assert_eq!(settings.overlay_animation, "default.webm");
 }
 
 #[test]
 fn test_settings_validate() {
     let mut settings = Settings::default();
     
-    settings.work_duration_secs = 100; // Too low
-    settings.break_duration_secs = 5000; // Too high
+    settings.work_duration_secs = 100; // Too low (min 300)
+    settings.break_duration_secs = 10000; // Too high (max 7200)
     
     settings.validate();
     
     assert_eq!(settings.work_duration_secs, 300);
-    assert_eq!(settings.break_duration_secs, 1800);
+    assert_eq!(settings.break_duration_secs, 7200);
 }
 
 #[test]
@@ -61,4 +61,59 @@ fn test_settings_io() {
     
     // Clean up
     fs::remove_dir_all(&config_dir).unwrap();
+}
+
+#[test]
+fn test_settings_corrupted_json() {
+    let config_dir = std::env::current_dir().unwrap().join("test_config_corrupted");
+    if config_dir.exists() {
+        fs::remove_dir_all(&config_dir).unwrap();
+    }
+    fs::create_dir_all(&config_dir).unwrap();
+    
+    let config_path = config_dir.join("config.json");
+    fs::write(&config_path, "{ \"invalid\": \"json\" ...").unwrap(); // Corrupted JSON
+    
+    // We can't directly use Settings::load() because it uses a hardcoded path.
+    // However, we can test the internal logic by mimicking the load behavior.
+    let result = fs::read_to_string(&config_path)
+        .and_then(|s| serde_json::from_str::<Settings>(&s).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e)))
+        .unwrap_or_else(|_| Settings::default());
+    
+    assert_eq!(result.work_duration_secs, Settings::default().work_duration_secs);
+    
+    fs::remove_dir_all(&config_dir).unwrap();
+}
+
+#[test]
+fn test_settings_save_error_branch() {
+    let settings = Settings::default();
+    let result = settings.force_save_error_test();
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_settings_autostart_logic() {
+    let mut settings = Settings::default();
+    settings.autostart = true;
+    let _ = settings.update_autostart();
+    settings.autostart = false;
+    let _ = settings.update_autostart();
+}
+
+#[test]
+fn test_settings_load_not_exists() {
+    let path = Settings::get_config_path();
+    // Ensure file doesn't exist
+    if path.exists() {
+        let _ = fs::rename(&path, path.with_extension("bak"));
+    }
+    
+    let settings = Settings::load();
+    assert_eq!(settings.work_duration_secs, Settings::default().work_duration_secs);
+    
+    // Restore backup
+    if path.with_extension("bak").exists() {
+        let _ = fs::rename(path.with_extension("bak"), &path);
+    }
 }

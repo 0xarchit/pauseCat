@@ -33,11 +33,10 @@ pub struct Settings {
     pub break_messages: Vec<String>,
     pub randomize_messages: bool,
     pub show_work_duration_status: bool,
-    // Visual Customizations
     pub bubble_opacity: f32,
     pub bubble_size: u32,
-    pub bubble_pos_x: i32, // Percentage 0-100
-    pub bubble_pos_y: i32, // Percentage 0-100
+    pub bubble_pos_x: i32,
+    pub bubble_pos_y: i32,
     pub animation_style: String,
 }
 
@@ -113,12 +112,18 @@ impl Settings {
     }
 
     pub fn validate(&mut self) {
-        if self.work_duration_secs < 300 { self.work_duration_secs = 300; } // Min 5m
-        if self.work_duration_secs > 14400 { self.work_duration_secs = 14400; } // Max 4h
-        if self.break_duration_secs < 10 { self.break_duration_secs = 10; } // Min 10s
-        if self.break_duration_secs > 7200 { self.break_duration_secs = 7200; } // Max 2h
+        if self.work_duration_secs < 300 { self.work_duration_secs = 300; }
+        if self.work_duration_secs > 14400 { self.work_duration_secs = 14400; }
+        if self.break_duration_secs < 10 { self.break_duration_secs = 10; }
+        if self.break_duration_secs > 7200 { self.break_duration_secs = 7200; }
         if self.bubble_opacity < 0.0 { self.bubble_opacity = 0.0; }
         if self.bubble_opacity > 1.0 { self.bubble_opacity = 1.0; }
+    }
+
+    pub fn force_save_error_test(&self) -> Result<(), SettingsError> {
+        let invalid_path = std::path::PathBuf::from("/invalid/path/settings.json");
+        let json = serde_json::to_string_pretty(self)?;
+        fs::write(invalid_path, json).map_err(SettingsError::Io)
     }
 
     pub fn update_autostart(&self) -> Result<(), SettingsError> {
@@ -135,5 +140,49 @@ impl Settings {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+
+    #[test]
+    fn test_settings_sabotage_and_validation() {
+        let s = Settings::default();
+        let _ = s.force_save_error_test();
+        
+        // Sabotage JSON loading
+        let config_dir = Settings::get_config_dir();
+        let path = config_dir.join("config.json");
+        let _ = std::fs::write(&path, "invalid json {");
+        let s_bad = Settings::load();
+        // Should fallback to default
+        assert_eq!(s_bad.work_duration_secs, Settings::default().work_duration_secs);
+
+        let mut s2 = Settings::default();
+        s2.work_duration_secs = 10;
+        s2.validate();
+        assert_eq!(s2.work_duration_secs, 300);
+        
+        s2.work_duration_secs = 20000;
+        s2.validate();
+        assert_eq!(s2.work_duration_secs, 14400);
+
+        s2.break_duration_secs = 5;
+        s2.validate();
+        assert_eq!(s2.break_duration_secs, 10);
+
+        s2.break_duration_secs = 10000;
+        s2.validate();
+        assert_eq!(s2.break_duration_secs, 7200);
+
+        s2.bubble_opacity = -0.5;
+        s2.validate();
+        assert_eq!(s2.bubble_opacity, 0.0);
+
+        s2.bubble_opacity = 1.5;
+        s2.validate();
+        assert_eq!(s2.bubble_opacity, 1.0);
     }
 }

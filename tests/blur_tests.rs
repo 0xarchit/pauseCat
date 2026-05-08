@@ -26,10 +26,20 @@ fn test_blur_small_image() {
     assert_eq!(blurred.len(), data.len());
     
     // The white pixel should be spread to its neighbors
-    // Check if some other pixel is now non-zero
     let neighbor_idx = (2 * width + 1) * 4;
     assert!(blurred[neighbor_idx] > 0);
-    
-    // The original white pixel should now be less than 255
     assert!(blurred[idx] < 255);
+}
+
+#[test]
+fn test_blur_edge_cases() {
+    // Zero size
+    let data = vec![];
+    let blurred = blur(&data, 0, 0, 10.0);
+    assert!(blurred.is_empty());
+    
+    // Large radius
+    let data = vec![0u8; 100];
+    let blurred = blur(&data, 5, 5, 100.0);
+    assert_eq!(blurred.len(), 100);
 }

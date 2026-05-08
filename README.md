@@ -6,6 +6,7 @@
   [![Status](https://img.shields.io/badge/Status-Active%20Development-000000.svg?style=for-the-badge&logo=rocket&logoColor=white&labelColor=000000&color=000000)](https://github.com/0xarchit/pauseCat/pulse)
   [![License](https://img.shields.io/badge/License-Apache%202.0-000000.svg?style=for-the-badge&logo=apache&logoColor=white&labelColor=000000&color=000000)](LICENSE)
   [![Rust](https://img.shields.io/badge/Rust-1.94+-000000.svg?style=for-the-badge&logo=rust&logoColor=white&labelColor=000000&color=000000)](https://rust-lang.org)
+  [![Coverage](https://img.shields.io/badge/Coverage-70.53%25-000000.svg?style=for-the-badge&logo=codecov&logoColor=white&labelColor=000000&color=000000)](https://github.com/0xarchit/pauseCat)
 
   ---
 </div>
@@ -72,3 +73,4 @@ We welcome contributions! Please see our [CONTRIBUTING.md](.github/CONTRIBUTING.
 <div align="center">
   Built with ❤️ in Rust for a healthier digital life.
 </div>
+

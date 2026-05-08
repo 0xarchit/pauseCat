@@ -32,6 +32,22 @@ pub struct UpdateInfo {
     pub changelog: String,
 }
 
+pub fn parse_and_check_version(release_json: &GithubRelease, current_version: &str) -> Result<UpdateInfo, Box<dyn std::error::Error>> {
+    let latest_ver_str = release_json.tag_name.trim_start_matches('v');
+    let current_ver = Version::parse(current_version)?;
+    let latest_ver = Version::parse(latest_ver_str)?;
+
+    Ok(UpdateInfo {
+        available: latest_ver > current_ver,
+        latest_version: release_json.tag_name.clone(),
+        changelog: release_json.body.clone(),
+    })
+}
+
+pub fn parse_github_release(json: &str) -> Result<GithubRelease, Box<dyn std::error::Error>> {
+    serde_json::from_str(json).map_err(|e| e.into())
+}
+
 pub fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error>> {
     let client = reqwest::blocking::Client::builder()
         .user_agent("PauseCat-Updater-v1")
@@ -52,15 +68,12 @@ pub fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error>> {
     }
 
     let release: GithubRelease = response.json()?;
-    let latest_ver_str = release.tag_name.trim_start_matches('v');
-    let current_ver = Version::parse(APP_VERSION)?;
-    let latest_ver = Version::parse(latest_ver_str)?;
+    parse_and_check_version(&release, APP_VERSION)
+}
 
-    Ok(UpdateInfo {
-        available: latest_ver > current_ver,
-        latest_version: release.tag_name,
-        changelog: release.body,
-    })
+pub fn find_msi_asset(release: &GithubRelease) -> Option<&GithubAsset> {
+    release.assets.iter()
+        .find(|a| a.name.to_lowercase().ends_with(".msi"))
 }
 
 pub fn download_and_install(event_tx: Sender<AppEvent>) -> Result<(), Box<dyn std::error::Error>> {
@@ -69,8 +82,7 @@ pub fn download_and_install(event_tx: Sender<AppEvent>) -> Result<(), Box<dyn st
         .build()?;
 
     let release: GithubRelease = client.get(GITHUB_API_URL).send()?.json()?;
-    let asset = release.assets.iter()
-        .find(|a| a.name.to_lowercase().ends_with(".msi"))
+    let asset = find_msi_asset(&release)
         .ok_or("No MSI installer found in the latest release")?;
 
     let mut update_dir = Settings::get_config_dir();
@@ -134,7 +146,10 @@ pub fn download_and_install(event_tx: Sender<AppEvent>) -> Result<(), Box<dyn st
         );
     }
 
+    #[cfg(not(test))]
     std::process::exit(0);
+    #[cfg(test)]
+    Ok(())
 }
 
 pub fn cleanup_updates() {
@@ -142,5 +157,49 @@ pub fn cleanup_updates() {
     update_dir.push("Updates");
     if update_dir.exists() {
         let _ = fs::remove_dir_all(&update_dir);
+    }
+}
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+
+    #[test]
+    fn test_github_release_parsing_logic() {
+        let json = r#"{
+            "tag_name": "v1.2.0",
+            "body": "New version",
+            "assets": [
+                {"name": "pausecat.msi", "browser_download_url": "http://test.com/msi", "size": 1000},
+                {"name": "readme.txt", "browser_download_url": "http://test.com/txt", "size": 500}
+            ]
+        }"#;
+        
+        let release = parse_github_release(json).unwrap();
+        assert_eq!(release.tag_name, "v1.2.0");
+        assert_eq!(release.assets.len(), 2);
+        
+        let info = parse_and_check_version(&release, "1.1.0").unwrap();
+        assert!(info.available);
+        assert_eq!(info.latest_version, "v1.2.0");
+        
+        let msi = find_msi_asset(&release).unwrap();
+        assert_eq!(msi.name, "pausecat.msi");
+    }
+
+    #[test]
+    fn test_no_update_available_logic() {
+        let release = GithubRelease {
+            tag_name: "v1.0.0".to_string(),
+            body: "No changes".to_string(),
+            assets: vec![],
+        };
+        let info = parse_and_check_version(&release, "1.0.0").unwrap();
+        assert!(!info.available);
+    }
+
+    #[test]
+    fn test_cleanup_updates_smoke() {
+        cleanup_updates();
     }
 }

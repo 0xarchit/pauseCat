@@ -1,3 +1,4 @@
+pub mod app;
 pub mod settings;
 pub mod settings_ui;
 pub mod tray;

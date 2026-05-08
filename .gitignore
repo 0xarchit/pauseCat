@@ -8,3 +8,8 @@ engineeringDocument.md
 gemini.md
 *.prompt.md
 .gemini
+*.profraw
+tarpaulin-report.xml
+cobertura.xml
+*.profdata
+coverage/

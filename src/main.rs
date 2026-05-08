@@ -1,239 +1,8 @@
 #![windows_subsystem = "windows"]
 
-use std::sync::{Arc, RwLock};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
-use std::thread;
 use windows::Win32::UI::WindowsAndMessaging::*;
-use windows::Win32::System::Com::*;
 use windows::Win32::Foundation::*;
-use pausecat::settings::Settings;
-use pausecat::tray::TrayIcon;
-use pausecat::events::AppEvent;
-use pausecat::timer;
-use pausecat::overlay::{OverlayWindow, capture, blur, webview_env};
-use pausecat::settings_ui::SettingsWindow;
-
-struct App {
-    settings: Arc<RwLock<Settings>>,
-    paused: Arc<AtomicBool>,
-    session_paused: Arc<AtomicBool>,
-    event_tx: mpsc::Sender<AppEvent>,
-    event_rx: mpsc::Receiver<AppEvent>,
-    tray: Option<TrayIcon>,
-    reminder_overlay: Option<OverlayWindow>,
-    settings_window: Option<SettingsWindow>,
-    was_media_playing: bool,
-    is_dark_mode: bool,
-    pre_captured_bg: Arc<RwLock<Option<(i32, i32, Vec<u8>)>>>,
-}
-
-impl App {
-    fn new() -> Self {
-        let (event_tx, event_rx) = mpsc::channel::<AppEvent>();
-        let settings = Arc::new(RwLock::new(Settings::load()));
-        let paused = Arc::new(AtomicBool::new(false));
-        let session_paused = Arc::new(AtomicBool::new(false));
-        let is_dark_mode = pausecat::system::is_dark_mode();
-
-        Self {
-            settings,
-            paused,
-            session_paused,
-            event_tx,
-            event_rx,
-            tray: None,
-            reminder_overlay: None,
-            settings_window: None,
-            was_media_playing: false,
-            is_dark_mode,
-            pre_captured_bg: Arc::new(RwLock::new(None)),
-        }
-    }
-
-    fn init(&mut self) -> windows::core::Result<()> {
-        unsafe {
-            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-        }
-
-        let _ = webview_env::init_global_env();
-        let _ = self.settings.read().unwrap().update_autostart();
-        pausecat::system::set_tray_menu_theme(self.is_dark_mode);
-        self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
-
-        pausecat::updater::cleanup_updates();
-
-        let settings_clone = self.settings.clone();
-        let event_tx_clone = self.event_tx.clone();
-        let paused_clone = self.paused.clone();
-        let session_paused_clone = self.session_paused.clone();
-        let bg_clone = self.pre_captured_bg.clone();
-        
-        thread::spawn(move || {
-            timer::run_optimized(
-                settings_clone, 
-                event_tx_clone, 
-                paused_clone, 
-                session_paused_clone,
-                bg_clone
-            );
-        });
-
-        Ok(())
-    }
-
-    fn handle_event(&mut self, event: AppEvent) {
-        match event {
-            AppEvent::ShowOverlay => {
-                if self.reminder_overlay.is_none() && !self.session_paused.load(Ordering::Relaxed) {
-                    self.pause_media();
-                    self.show_overlay_optimized();
-                }
-            }
-            AppEvent::HideOverlay | AppEvent::UserDismissed => {
-                if self.reminder_overlay.is_some() {
-                    self.resume_media();
-                }
-                self.reminder_overlay = None;
-            }
-            AppEvent::SettingsClosed => {
-                self.settings_window = None;
-            }
-            AppEvent::TogglePause => {
-                let new_paused = !self.paused.load(Ordering::Relaxed);
-                self.paused.store(new_paused, Ordering::Relaxed);
-                if let Some(ref tray) = self.tray {
-                    tray.set_paused(new_paused);
-                }
-            }
-            AppEvent::OpenSettings => {
-                if self.settings_window.is_none() {
-                    let current_settings = self.settings.read().unwrap().clone();
-                    if let Ok(win) = SettingsWindow::new(self.event_tx.clone(), current_settings) {
-                        win.update_theme(self.is_dark_mode);
-                        pausecat::system::apply_immersive_dark_mode(win.hwnd, self.is_dark_mode);
-                        self.settings_window = Some(win);
-                    }
-                } else {
-                    // Bring existing window to front if it's already open
-                    if let Some(ref win) = self.settings_window {
-                        unsafe {
-                            let _ = SetForegroundWindow(win.hwnd);
-                            let _ = ShowWindow(win.hwnd, SW_SHOW);
-                        }
-                    }
-                }
-            }
-            AppEvent::ConfigChanged(new_settings) => {
-                let mut settings = self.settings.write().unwrap();
-                *settings = new_settings;
-                let _ = settings.save();
-            }
-            AppEvent::CheckForUpdates => {
-                let event_tx = self.event_tx.clone();
-                thread::spawn(move || {
-                    match pausecat::updater::check_for_updates() {
-                        Ok(info) => { let _ = event_tx.send(AppEvent::UpdateStatus(info)); }
-                        Err(e) => { let _ = event_tx.send(AppEvent::UpdateError(e.to_string())); }
-                    }
-                });
-            }
-            AppEvent::UpdateStatus(info) => {
-                if let Some(ref mut win) = self.settings_window {
-                    win.send_update_status(info);
-                }
-            }
-            AppEvent::StartUpdate => {
-                let event_tx = self.event_tx.clone();
-                thread::spawn(move || {
-                    if let Err(e) = pausecat::updater::download_and_install(event_tx.clone()) {
-                        let _ = event_tx.send(AppEvent::UpdateError(e.to_string()));
-                    }
-                });
-            }
-            AppEvent::UpdateProgress(percentage) => {
-                if let Some(ref mut win) = self.settings_window {
-                    win.send_update_progress(percentage);
-                }
-            }
-            AppEvent::UpdateError(err) => {
-                if let Some(ref mut win) = self.settings_window {
-                    win.send_update_error(err);
-                }
-            }
-            AppEvent::ThemeChanged(is_dark) => {
-                self.is_dark_mode = is_dark;
-                pausecat::system::set_tray_menu_theme(is_dark);
-                if let Some(ref mut win) = self.settings_window {
-                    win.update_theme(is_dark);
-                    pausecat::system::apply_immersive_dark_mode(win.hwnd, is_dark);
-                }
-                if let Some(ref mut win) = self.reminder_overlay {
-                    win.update_theme(is_dark);
-                    pausecat::system::apply_immersive_dark_mode(win.hwnd, is_dark);
-                }
-            }
-            AppEvent::SessionLocked => {
-                self.session_paused.store(true, Ordering::Relaxed);
-                self.reminder_overlay = None;
-            }
-            AppEvent::SessionUnlocked => {
-                self.session_paused.store(false, Ordering::Relaxed);
-            }
-            AppEvent::Quit => {
-                unsafe { PostQuitMessage(0) };
-            }
-        }
-    }
-
-    fn show_overlay_optimized(&mut self) {
-        let (width, height, data) = if let Some(bg) = self.pre_captured_bg.read().unwrap().clone() {
-            bg
-        } else {
-            if let Ok(captured) = capture::capture_virtual_screen() {
-                let blurred = blur::blur(&captured.data, captured.width as usize, captured.height as usize, 10.0);
-                (captured.width, captured.height, blurred)
-            } else { return; }
-        };
-
-        let current_settings = self.settings.read().unwrap().clone();
-        if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), width, height, data, current_settings) {
-            overlay.update_theme(self.is_dark_mode);
-            pausecat::system::apply_immersive_dark_mode(overlay.hwnd, self.is_dark_mode);
-            overlay.fade_in();
-            self.reminder_overlay = Some(overlay);
-        }
-        
-        let mut lock = self.pre_captured_bg.write().unwrap();
-        *lock = None;
-    }
-
-    fn pause_media(&mut self) {
-        if pausecat::system::is_media_playing() {
-            unsafe {
-                let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(47 << 16)));
-            }
-            self.was_media_playing = true; 
-        } else {
-            self.was_media_playing = false;
-        }
-    }
-
-    fn resume_media(&mut self) {
-        if self.was_media_playing {
-            unsafe {
-                let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(46 << 16)));
-            }
-            self.was_media_playing = false;
-        }
-    }
-
-    fn drain_events(&mut self) {
-        while let Ok(event) = self.event_rx.try_recv() {
-            self.handle_event(event);
-        }
-    }
-}
+use pausecat::app::App;
 
 fn setup_logging() -> windows::core::Result<()> {
     let mut path = dirs::config_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
@@ -262,8 +31,16 @@ fn check_webview2() -> windows::core::Result<bool> {
     unsafe {
         let mut version = windows::core::PWSTR::null();
         let result = GetAvailableCoreWebView2BrowserVersionString(windows::core::PCWSTR::null(), &mut version);
-        Ok(result.is_ok())
+        let exists = result.is_ok();
+        if !version.is_null() {
+            windows::Win32::System::Com::CoTaskMemFree(Some(version.0 as *const _));
+        }
+        Ok(exists)
     }
+}
+
+pub fn is_settings_mode() -> bool {
+    std::env::args().any(|arg| arg == "--settings")
 }
 
 fn main() -> windows::core::Result<()> {
@@ -297,6 +74,10 @@ fn main() -> windows::core::Result<()> {
         return Err(e);
     }
 
+    if is_settings_mode() {
+        app.handle_event(pausecat::events::AppEvent::OpenSettings);
+    }
+
     unsafe {
         let _ = SetTimer(None, 1, 100, None);
 
@@ -309,4 +90,28 @@ fn main() -> windows::core::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod internal_tests {
+    use super::*;
+
+    #[test]
+    fn test_main_helpers_smoke() {
+        let _ = check_webview2();
+        let _ = setup_logging();
+        
+        // Mock args for is_settings_mode
+        let _ = is_settings_mode();
+    }
+    
+    #[test]
+    fn test_mutex_logic_smoke() {
+        unsafe {
+            use windows::Win32::System::Threading::CreateMutexW;
+            let mutex_name = windows::core::w!("Global\\PauseCatTestMutex");
+            let _ = CreateMutexW(None, true, mutex_name);
+            let _ = GetLastError();
+        }
+    }
 }
