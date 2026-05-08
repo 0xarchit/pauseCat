@@ -5,7 +5,6 @@ Thumbs.db
 *.log
 prd.md
 engineeringDocument.md
-gemini.md
 *.prompt.md
 .gemini
 *.profraw
