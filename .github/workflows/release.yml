@@ -26,7 +26,7 @@ jobs:
 
       - name: Install WiX Extensions
         run: |
-          wix eula accept
+          wix eula accept wix7
           wix extension add -g WixToolset.UI.wixext
           wix extension add -g WixToolset.Util.wixext
 
