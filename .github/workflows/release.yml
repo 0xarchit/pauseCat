@@ -26,18 +26,24 @@ jobs:
 
       - name: Install WiX Extensions
         run: |
-          wix eula accept wix7
+          wix eula accept
           wix extension add -g WixToolset.UI.wixext
           wix extension add -g WixToolset.Util.wixext
 
+      - name: Install UPX
+        run: choco install upx --no-progress
+
       - name: Build Optimized Binary
         run: |
-          $env:RUSTFLAGS="-C link-arg=/OPT:REF -C link-arg=/OPT:ICF"
+          $env:RUSTFLAGS="-C link-arg=/OPT:REF -C link-arg=/OPT:ICF -C link-arg=/INCREMENTAL:NO"
           cargo build --release
+
+      - name: Compress Binary with UPX
+        run: upx --best --lzma target\release\pausecat.exe
 
       - name: Build MSI Installer
         run: |
-          wix build wix/main.wxs -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -o target/release/PauseCat_Installer.msi
+          wix build wix\main.wxs -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext -o target\release\PauseCat_Installer.msi
 
       - name: Upload Release Artifacts
         uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
