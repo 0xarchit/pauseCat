@@ -8,7 +8,7 @@
 
     <SummaryInformation Keywords="Installer" Description="PauseCat Break Reminder" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
-    <Media Id="1" Cabinet="pausecat.cab" EmbedCab="yes" />
+    <Media Id="1" Cabinet="pausecat.cab" EmbedCab="yes" CompressionLevel="high" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="PauseCat">

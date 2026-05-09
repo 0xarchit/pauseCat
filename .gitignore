@@ -12,3 +12,5 @@ tarpaulin-report.xml
 cobertura.xml
 *.profdata
 coverage/
+gemini.md
+graphify-out
