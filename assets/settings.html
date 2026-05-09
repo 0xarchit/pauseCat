@@ -166,28 +166,28 @@
             font-size: 3rem; font-weight: 900; 
             color: var(--text-color, #fff);
             text-transform: uppercase; 
-            transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg));
+            transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg));
             text-shadow: var(--text-3d-shadow);
             opacity: var(--text-opacity, 0.2); 
             animation: previewFloat 5s ease-in-out infinite;
             text-align: center;
-            filter: drop-shadow(0 0 var(--text-glow-radius, 10px) var(--text-color, #fff));
+            filter: var(--text-glow-filter, none);
         }
         @keyframes previewFloat {
-            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) translateZ(0); }
-            50% { transform: rotateX(calc(var(--rot-x, 20deg) + 5deg)) rotateY(calc(var(--rot-y, -20deg) + 5deg)) translateZ(10px); }
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) translateZ(0); }
+            50% { transform: rotateX(calc(var(--rot-x, 20deg) + 5deg)) rotateY(calc(var(--rot-y, -20deg) + 5deg)) rotateZ(var(--rot-z, 0deg)) translateZ(10px); }
         }
         @keyframes previewRotate {
-            0% { transform: rotateX(var(--rot-x, 20deg)) rotateY(0deg); }
-            100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(360deg); }
+            0% { transform: rotateX(var(--rot-x, 20deg)) rotateY(0deg) rotateZ(var(--rot-z, 0deg)); }
+            100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(360deg) rotateZ(var(--rot-z, 0deg)); }
         }
         @keyframes previewSwing {
-            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(-40deg); }
-            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(40deg); }
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(-40deg) rotateZ(var(--rot-z, 0deg)); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(40deg) rotateZ(var(--rot-z, 0deg)); }
         }
         @keyframes previewPulse {
-            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) scale(1); opacity: var(--text-opacity, 0.2); }
-            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) scale(1.1); opacity: calc(var(--text-opacity, 0.2) + 0.1); }
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) scale(1); opacity: var(--text-opacity, 0.2); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) scale(1.1); opacity: calc(var(--text-opacity, 0.2) + 0.1); }
         }
 
         .preview-bubble {
@@ -298,31 +298,19 @@
     </div>
 
     <div class="scroll-container">
-        <!-- Professional Update Popup (Modal) -->
+        <!-- Modal Overlay for Notifications -->
         <div id="update-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <span class="modal-title">✨ Update Available</span>
-                <span id="update-modal-desc" class="modal-desc">A newer version of PauseCat is ready for you. Experience new features and better performance!</span>
-                
+                <span id="update-modal-desc" class="modal-desc">A newer version is ready!</span>
                 <div id="update-progress-section" class="hidden">
-                    <div class="progress-container">
-                        <div id="update-progress-bar" class="progress-bar"></div>
-                    </div>
-                    <span id="update-progress-label" style="font-size: 0.8rem; opacity: 0.8;">Downloading... 0%</span>
+                    <div class="progress-container"><div id="update-progress-bar" class="progress-bar"></div></div>
                 </div>
-
                 <div id="update-actions" style="display: flex; justify-content: center; gap: 12px;">
                     <button class="btn-secondary" onclick="hideUpdateModal()">Later</button>
                     <button class="btn-primary" onclick="startUpdate()">Update Now</button>
                 </div>
             </div>
-        </div>
-
-        <!-- Custom Notification Popup -->
-        <div id="notification-box" class="notification hidden">
-            <span id="notification-title" style="font-weight: 700; font-size: 0.9rem;">Notification</span>
-            <span id="notification-msg" style="font-size: 0.85rem; opacity: 0.8;">Message details go here.</span>
-            <button class="btn-primary" style="align-self: flex-end; padding: 4px 12px; font-size: 0.75rem;" onclick="hideNotification()">Close</button>
         </div>
 
         <div class="section-title">Live Preview</div>
@@ -339,66 +327,41 @@
                 <span id="asset-dot" class="status-dot"></span>
                 <span id="asset-label">Checking assets...</span>
             </div>
-            <div id="app-version">v1.0.0</div>
+            <div id="app-version">v1.0.2</div>
         </div>
 
         <div class="section-title">Schedule</div>
         <div class="card">
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Work Duration</span>
-                    <span class="setting-description">Minutes before break</span>
-                </div>
-                <div class="control">
-                    <input type="number" id="work_duration" min="5" max="240" step="5">
-                </div>
+                <div class="setting-info"><span class="setting-label">Work Duration</span></div>
+                <input type="number" id="work_duration" min="5" max="240" step="5">
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Break Duration</span>
-                    <span class="setting-description">Minutes break lasts (Max 120)</span>
-                </div>
-                <div class="control">
-                    <input type="number" id="break_duration" min="1" max="120" step="1" oninput="validateBreakDuration()">
-                </div>
+                <div class="setting-info"><span class="setting-label">Break Duration</span></div>
+                <input type="number" id="break_duration" min="1" max="120" step="1">
             </div>
         </div>
 
         <div class="section-title">Bubble Designer</div>
         <div class="card">
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Transparency</span>
-                    <span class="setting-description">Glass effect intensity</span>
-                </div>
+                <div class="setting-info"><span class="setting-label">Transparency</span></div>
                 <input type="range" id="bubble_opacity" min="0.05" max="0.95" step="0.05" oninput="updatePreviewFromUI()">
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Bubble Size</span>
-                    <span class="setting-description">Diameter (Small to Large)</span>
-                </div>
+                <div class="setting-info"><span class="setting-label">Bubble Size</span></div>
                 <input type="range" id="bubble_size" min="300" max="800" step="10" oninput="updatePreviewFromUI()">
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Horizontal Position</span>
-                    <span class="setting-description">Left to Right (%)</span>
-                </div>
+                <div class="setting-info"><span class="setting-label">Horizontal Position</span></div>
                 <input type="range" id="bubble_pos_x" min="0" max="100" step="1" oninput="updatePreviewFromUI()">
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Vertical Position</span>
-                    <span class="setting-description">Top to Bottom (%)</span>
-                </div>
+                <div class="setting-info"><span class="setting-label">Vertical Position</span></div>
                 <input type="range" id="bubble_pos_y" min="0" max="100" step="1" oninput="updatePreviewFromUI()">
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Animation Style</span>
-                    <span class="setting-description">Movement behavior</span>
-                </div>
+                <div class="setting-info"><span class="setting-label">Animation Style</span></div>
                 <select id="animation_style" onchange="updatePreviewFromUI()">
                     <option value="none">Static</option>
                     <option value="float">Gentle Float</option>
@@ -411,206 +374,69 @@
         <div class="section-title">Visuals</div>
         <div class="card">
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Break Mode</span>
-                    <span class="setting-description">Lock desktop during break</span>
-                </div>
-                <div class="control">
-                    <select id="mode">
-                        <option value="soft">Soft Mode</option>
-                        <option value="hard">Hard Mode</option>
-                    </select>
-                </div>
+                <div class="setting-info"><span class="setting-label">Break Style</span></div>
+                <select id="break_style" onchange="toggleBreakStyle()">
+                    <option value="media">Cinematic Media</option>
+                    <option value="text">3D Dynamic Text</option>
+                </select>
             </div>
 
-            <div class="setting-row" style="margin-top: 16px;">
-                <div class="setting-info">
-                    <span class="setting-label">Break Style</span>
-                    <span class="setting-description">Visuals during break</span>
-                </div>
-                <div class="control">
-                    <select id="break_style" onchange="toggleBreakStyle()">
-                        <option value="media">Cinematic Media</option>
-                        <option value="text">3D Dynamic Text</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="text-style-options" class="hidden" style="margin-top: 16px;">
-                <div class="setting-info">
-                    <span class="setting-label">Custom Break Text</span>
-                    <span class="setting-description">Displays in 3D (Max 20 chars)</span>
-                </div>
-                <div class="add-row">
-                    <input type="text" id="custom_text" maxlength="20" placeholder="e.g. PAUSE" oninput="updatePreviewFromUI()">
-                </div>
+            <div id="text-style-options" class="hidden">
+                <div class="setting-info" style="margin-top: 16px;"><span class="setting-label">Custom Break Text</span></div>
+                <div class="add-row"><input type="text" id="custom_text" maxlength="20" oninput="updatePreviewFromUI()"></div>
 
                 <div class="setting-row" style="margin-top: 16px;">
-                    <div class="setting-info">
-                        <span class="setting-label">Text Animation</span>
-                        <span class="setting-description">Movement behavior</span>
-                    </div>
-                    <select id="text_animation" onchange="updatePreviewFromUI()">
-                        <option value="none">Static</option>
-                        <option value="float">Gentle Float</option>
-                        <option value="rotate">3D Rotate</option>
-                        <option value="swing">Swing</option>
-                        <option value="pulse">Soft Pulse</option>
-                    </select>
+                    <div class="setting-info"><span class="setting-label">Adaptive Color</span></div>
+                    <label class="switch"><input type="checkbox" id="adaptive_text_color" onchange="updatePreviewFromUI()"><span class="slider"></span></label>
                 </div>
 
                 <div class="setting-row">
-                    <div class="setting-info">
-                        <span class="setting-label">Adaptive Text Color</span>
-                        <span class="setting-description">Auto-contrast based on theme</span>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="adaptive_text_color" onchange="updatePreviewFromUI()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="setting-row">
-                    <div class="setting-info">
-                        <span class="setting-label">3D Rotation X</span>
-                        <span class="setting-description">Tilt forward/back (deg)</span>
-                    </div>
+                    <div class="setting-info"><span class="setting-label">3D Rotation X</span></div>
                     <input type="range" id="text_rotation_x" min="-90" max="90" step="1" oninput="updatePreviewFromUI()">
                 </div>
-
                 <div class="setting-row">
-                    <div class="setting-info">
-                        <span class="setting-label">3D Rotation Y</span>
-                        <span class="setting-description">Tilt side to side (deg)</span>
-                    </div>
+                    <div class="setting-info"><span class="setting-label">3D Rotation Y</span></div>
                     <input type="range" id="text_rotation_y" min="-90" max="90" step="1" oninput="updatePreviewFromUI()">
                 </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">3D Rotation Z</span></div>
+                    <input type="range" id="text_rotation_z" min="-180" max="180" step="1" oninput="updatePreviewFromUI()">
+                </div>
 
                 <div class="setting-row">
-                    <div class="setting-info">
-                        <span class="setting-label">Text Color</span>
-                        <span class="setting-description">Pick your vibe</span>
-                    </div>
+                    <div class="setting-info"><span class="setting-label">Text Color</span></div>
                     <input type="color" id="text_color" oninput="updatePreviewFromUI()">
                 </div>
-
                 <div class="setting-row">
-                    <div class="setting-info">
-                        <span class="setting-label">Text Translucency</span>
-                        <span class="setting-description">Ghostly to Solid</span>
-                    </div>
-                    <input type="range" id="text_opacity" min="0.05" max="1.0" step="0.05" oninput="updatePreviewFromUI()">
+                    <div class="setting-info"><span class="setting-label">Text Depth (3D)</span></div>
+                    <input type="range" id="text_depth" min="1" max="25" step="1" oninput="updatePreviewFromUI()">
                 </div>
 
-                <div class="setting-row">
-                    <div class="setting-info">
-                        <span class="setting-label">Text Glow</span>
-                        <span class="setting-description">Neon Bloom intensity</span>
-                    </div>
-                    <input type="range" id="text_glow" min="0" max="50" step="1" oninput="updatePreviewFromUI()">
+                <div class="setting-row" style="margin-top: 16px;">
+                    <div class="setting-info"><span class="setting-label">Enable Glow</span></div>
+                    <label class="switch"><input type="checkbox" id="text_glow_enabled" onchange="updatePreviewFromUI()"><span class="slider"></span></label>
                 </div>
-
                 <div class="setting-row">
-                    <div class="setting-info">
-                        <span class="setting-label">Text Depth</span>
-                        <span class="setting-description">3D Extrusion height</span>
-                    </div>
-                    <input type="range" id="text_depth" min="1" max="20" step="1" oninput="updatePreviewFromUI()">
+                    <div class="setting-info"><span class="setting-label">Glow Color</span></div>
+                    <input type="color" id="text_glow_color" oninput="updatePreviewFromUI()">
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">Glow Intensity</span></div>
+                    <input type="range" id="text_glow" min="0" max="60" step="1" oninput="updatePreviewFromUI()">
                 </div>
             </div>
-            
+
             <div id="media-style-options">
                 <div class="setting-row" style="margin-top: 16px;">
-                    <div class="setting-info">
-                        <span class="setting-label">Video Volume</span>
-                        <span class="setting-description">Loudness of break videos</span>
-                    </div>
+                    <div class="setting-info"><span class="setting-label">Video Volume</span></div>
                     <input type="range" id="video_volume" min="0" max="1" step="0.01" oninput="updatePreviewFromUI()">
-                </div>
-
-                <div class="setting-info" style="margin-top: 16px;">
-                    <span class="setting-label">Background Media</span>
-                    <span class="setting-description">Select your own vibe</span>
                 </div>
                 <div class="media-preview-area">
                     <div class="media-preview" onclick="selectMedia()">
-                        <div id="media-empty" class="media-placeholder">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            <span>Change Background</span>
-                        </div>
-                        <img id="preview-img" class="hidden">
-                        <video id="preview-video" class="hidden" muted loop></video>
+                        <div id="media-empty" class="media-placeholder"><span>Change Background</span></div>
+                        <img id="preview-img" class="hidden"><video id="preview-video" class="hidden" muted loop></video>
                     </div>
-                    <button id="reset-btn" class="reset-media hidden" onclick="resetToDefault(event)">Reset to Default</button>
                 </div>
-            </div>
-        </div>
-
-        <div class="section-title">Content</div>
-        <div class="card">
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Show Work Status</span>
-                    <span class="setting-description">Display 'Working for X' timer</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="show_work_status">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div class="setting-row" style="margin-top: 16px;">
-                <div class="setting-info">
-                    <span class="setting-label">Randomize Messages</span>
-                    <span class="setting-description">Pick random message per break</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="randomize_messages">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div class="setting-info" style="margin-top: 16px;">
-                <span class="setting-label">Custom Messages</span>
-                <span class="setting-description">Messages to show during rest</span>
-            </div>
-            <div id="break-messages-tags" class="list-container"></div>
-            <div class="add-row">
-                <input type="text" id="new-message-input" placeholder="New message...">
-                <button class="btn-primary" style="padding: 6px 12px;" onclick="addBreakMessage()">Add</button>
-            </div>
-        </div>
-
-        <div class="section-title">Whitelist</div>
-        <div class="card">
-            <div id="whitelist-tags" class="list-container"></div>
-            <div class="add-row">
-                <select id="running-apps-select">
-                    <option value="">Select app...</option>
-                </select>
-                <button class="btn-secondary" style="padding: 8px 12px;" onclick="refreshApps()">Refresh</button>
-                <button class="btn-primary" style="padding: 8px 12px;" onclick="addWhitelistedApp()">Add</button>
-            </div>
-        </div>
-
-        <div class="section-title">System</div>
-        <div class="card">
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Launch on Startup</span>
-                    <span class="setting-description">Auto-start PauseCat</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="autostart">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">App Updates</span>
-                    <span class="setting-description">Check for new versions on GitHub</span>
-                </div>
-                <button id="check-update-btn" class="btn-secondary" onclick="checkUpdates()">Check for Updates</button>
             </div>
         </div>
     </div>
@@ -621,227 +447,77 @@
     </div>
 
     <script>
-        document.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-        document.addEventListener('gesturestart', (e) => e.preventDefault());
-
         let currentMediaPath = "";
         let currentWhitelist = [];
         let currentBreakMessages = [];
         let isDarkMode = false;
 
-        function showNotification(title, msg) {
-            document.getElementById('notification-title').innerText = title;
-            document.getElementById('notification-msg').innerText = msg;
-            document.getElementById('notification-box').classList.remove('hidden');
-            setTimeout(hideNotification, 5000);
-        }
-        function hideNotification() { document.getElementById('notification-box').classList.add('hidden'); }
-        
-        function showUpdateModal(version) {
-            document.getElementById('update-modal-desc').innerText = `Version ${version} is available. Do you want to update now?`;
-            document.getElementById('update-modal').classList.remove('hidden');
-        }
-        function hideUpdateModal() { document.getElementById('update-modal').classList.add('hidden'); }
-
-        function selectMedia() { window.chrome.webview.postMessage({ action: "select_media" }); }
-        function refreshApps() { window.chrome.webview.postMessage({ action: "get_apps" }); }
-        
-        function checkUpdates() {
-            const btn = document.getElementById('check-update-btn');
-            btn.disabled = true; btn.innerText = "Checking...";
-            window.chrome.webview.postMessage({ action: "check_updates" });
-        }
-
-        function retrySync() {
-            const assetDot = document.getElementById('asset-dot');
-            const assetLabel = document.getElementById('asset-label');
-            assetDot.className = 'status-dot dot-missing';
-            assetLabel.innerText = 'Cinematic Assets: Retrying...';
-            const retryBtn = document.getElementById('asset-retry-btn');
-            if (retryBtn) retryBtn.classList.add('hidden');
-            window.chrome.webview.postMessage({ action: "retry_sync" });
-        }
-
-        function startUpdate() {
-            document.getElementById('update-actions').classList.add('hidden');
-            document.getElementById('update-progress-section').classList.remove('hidden');
-            window.chrome.webview.postMessage({ action: "start_update" });
-        }
-
-        function resetToDefault(event) {
-            event.stopPropagation(); currentMediaPath = "default.webm"; updatePreview("default.webm");
-        }
-
-        function addWhitelistedApp() {
-            const select = document.getElementById('running-apps-select');
-            const app = select.value;
-            if (app && !currentWhitelist.includes(app)) {
-                currentWhitelist.push(app); renderList('whitelist-tags', currentWhitelist, 'whitelist');
-            }
-        }
-
-        function addBreakMessage() {
-            const input = document.getElementById('new-message-input');
-            const msg = input.value.trim();
-            if (msg && !currentBreakMessages.includes(msg)) {
-                currentBreakMessages.push(msg); input.value = ""; renderList('break-messages-tags', currentBreakMessages, 'messages');
-            }
+        function toggleBreakStyle() {
+            const style = document.getElementById('break_style').value;
+            document.getElementById('text-style-options').classList.toggle('hidden', style !== 'text');
+            document.getElementById('media-style-options').classList.toggle('hidden', style === 'text');
+            updatePreviewFromUI();
         }
 
         function generate3DShadow(color, depth) {
             let shadows = [];
             for (let i = 1; i <= depth; i++) {
-                shadows.push(`${i}px ${i}px 0px ${adjustColor(color, -i * 5)}`);
+                shadows.push(`${i}px ${i}px 0px ${adjustColor(color, -i * 6)}`);
             }
-            shadows.push(`0 ${depth + 1}px 10px rgba(0,0,0,0.4)`);
+            shadows.push(`0 ${depth}px 20px rgba(0,0,0,0.5)`);
             return shadows.join(', ');
         }
 
         function adjustColor(hex, amount) {
-            if (hex === 'transparent' || hex === 'none') return hex;
-            let usePound = false;
-            if (hex[0] == "#") { hex = hex.slice(1); usePound = true; }
-            let num = parseInt(hex, 16);
-            let r = (num >> 16) + amount;
-            if (r > 255) r = 255; else if (r < 0) r = 0;
-            let b = ((num >> 8) & 0x00FF) + amount;
-            if (b > 255) b = 255; else if (b < 0) b = 0;
-            let g = (num & 0x0000FF) + amount;
-            if (g > 255) g = 255; else if (g < 0) g = 0;
-            return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
-        }
-
-        function renderList(containerId, list, type) {
-            const container = document.getElementById(containerId); container.innerHTML = "";
-            list.forEach(item => {
-                const tag = document.createElement('div');
-                tag.className = 'tag';
-                tag.innerHTML = `${item} <span onclick="window.handleRemove('${type}', '${item.replace(/'/g, "\\'")}')">&times;</span>`;
-                container.appendChild(tag);
-            });
-        }
-
-        window.handleRemove = (type, item) => {
-            if (type === 'whitelist') {
-                currentWhitelist = currentWhitelist.filter(i => i !== item); renderList('whitelist-tags', currentWhitelist, 'whitelist');
-            } else {
-                currentBreakMessages = currentBreakMessages.filter(i => i !== item); renderList('break-messages-tags', currentBreakMessages, 'messages');
-            }
-        };
-
-        function validateBreakDuration() {
-            const input = document.getElementById('break_duration');
-            const val = parseInt(input.value);
-            if (val > 120) {
-                input.style.borderColor = 'var(--danger-text)';
-                input.style.boxShadow = '0 0 0 3px var(--danger-border)';
-            } else {
-                input.style.borderColor = 'var(--border)';
-                input.style.boxShadow = 'none';
-            }
+            if (!hex.startsWith('#')) return hex;
+            let num = parseInt(hex.slice(1), 16);
+            let r = Math.max(0, Math.min(255, (num >> 16) + amount));
+            let b = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount));
+            let g = Math.max(0, Math.min(255, (num & 0x0000FF) + amount));
+            return "#" + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
         }
 
         function updatePreviewFromUI() {
+            const root = document.documentElement;
             const bubble = document.getElementById('live-preview-bubble');
-            const opacity = parseFloat(document.getElementById('bubble_opacity').value);
-            const size = parseInt(document.getElementById('bubble_size').value);
-            const posX = parseInt(document.getElementById('bubble_pos_x').value);
-            const posY = parseInt(document.getElementById('bubble_pos_y').value);
-            const anim = document.getElementById('animation_style').value;
-            const breakStyle = document.getElementById('break_style').value;
-            const customText = document.getElementById('custom_text').value || "PAUSE";
+            const style = document.getElementById('break_style').value;
+            const isDark = isDarkMode;
+
+            // Bubble
+            const opacity = document.getElementById('bubble_opacity').value;
+            bubble.style.backgroundColor = isDark ? `rgba(0,0,0,${opacity})` : `rgba(255,255,255,${opacity})`;
             
-            // Advanced Text Styles
-            const textAnim = document.getElementById('text_animation').value;
-            const rotX = document.getElementById('text_rotation_x').value;
-            const rotY = document.getElementById('text_rotation_y').value;
-            const textColor = document.getElementById('text_color').value;
-            const textOpacity = document.getElementById('text_opacity').value;
-
-            const previewSize = size / 4.8;
-            bubble.style.width = previewSize + "px"; bubble.style.height = previewSize + "px"; bubble.style.fontSize = (previewSize / 4) + "px";
-            bubble.style.backgroundColor = isDarkMode ? `rgba(0,0,0,${opacity})` : `rgba(255,255,255,${opacity})`;
-            bubble.style.left = `calc(${posX}% - ${previewSize * (posX/100)}px)`;
-            bubble.style.top = `calc(${posY}% - ${previewSize * (posY/100)}px)`;
-
-            const textContainer = document.getElementById('preview-text-container');
+            // Text Preview
             const text3d = document.getElementById('preview-text-3d');
-            const bgImg = document.getElementById('live-preview-bg-img');
-            const bgVid = document.getElementById('live-preview-bg-vid');
+            const textContainer = document.getElementById('preview-text-container');
+            const isAdaptive = document.getElementById('adaptive_text_color').checked;
+            const textColor = isAdaptive ? (isDark ? '#ffffff' : '#000000') : document.getElementById('text_color').value;
 
-            if (breakStyle === 'text') {
+            if (style === 'text') {
                 textContainer.classList.remove('hidden');
+                text3d.innerText = document.getElementById('custom_text').value || "PAUSE";
+                text3d.style.setProperty('--text-color', textColor);
+                text3d.style.setProperty('--rot-x', document.getElementById('text_rotation_x').value + 'deg');
+                text3d.style.setProperty('--rot-y', document.getElementById('text_rotation_y').value + 'deg');
+                text3d.style.setProperty('--rot-z', document.getElementById('text_rotation_z').value + 'deg');
+                text3d.style.setProperty('--text-opacity', document.getElementById('text_opacity').value);
+                text3d.style.setProperty('--text-3d-shadow', generate3DShadow(textColor, parseInt(document.getElementById('text_depth').value)));
                 
-                // Adaptive Color Logic for Preview
-                let finalColor = textColor;
-                if (document.getElementById('adaptive_text_color').checked) {
-                    finalColor = isDarkMode ? '#ffffff' : '#000000';
+                if (document.getElementById('text_glow_enabled').checked) {
+                    const glowColor = document.getElementById('text_glow_color').value;
+                    text3d.style.setProperty('--text-glow-filter', `drop-shadow(0 0 ${document.getElementById('text_glow').value}px ${glowColor})`);
+                } else {
+                    text3d.style.setProperty('--text-glow-filter', 'none');
                 }
-
-                text3d.innerText = customText;
-                
-                // Apply advanced preview styles
-                text3d.style.setProperty('--text-color', finalColor);
-                text3d.style.setProperty('--text-opacity', textOpacity);
-                text3d.style.setProperty('--rot-x', rotX + 'deg');
-                text3d.style.setProperty('--rot-y', rotY + 'deg');
-                
-                // Cinematic FX: 3D Extrusion & Glow
-                text3d.style.setProperty('--text-3d-shadow', generate3DShadow(finalColor, parseInt(document.getElementById('text_depth').value)));
-                text3d.style.setProperty('--text-glow-radius', document.getElementById('text_glow').value + 'px');
-
-                if (textAnim === 'float') text3d.style.animation = 'previewFloat 5s ease-in-out infinite';
-                else if (textAnim === 'rotate') text3d.style.animation = 'previewRotate 10s linear infinite';
-                else if (textAnim === 'swing') text3d.style.animation = 'previewSwing 6s ease-in-out infinite';
-                else if (textAnim === 'pulse') text3d.style.animation = 'previewPulse 4s ease-in-out infinite';
-                else text3d.style.animation = 'none';
-
-                bgImg.classList.add('hidden');
-                bgVid.classList.add('hidden');
             } else {
                 textContainer.classList.add('hidden');
-                updatePreview(currentMediaPath); // Refresh media visibility
             }
-
-            if (anim === 'pulse') {
-                bubble.style.setProperty('--pulse-opacity-start', opacity);
-                bubble.style.setProperty('--pulse-opacity-end', Math.max(0, opacity - 0.3));
-                bubble.style.animation = `pulse 2s ease-in-out infinite`;
-            } else if (anim !== 'none') { bubble.style.animation = `${anim} 3s ease-in-out infinite`;
-            } else { bubble.style.animation = 'none'; }
-        }
-
-        function toggleBreakStyle() {
-            const style = document.getElementById('break_style').value;
-            const textOptions = document.getElementById('text-style-options');
-            const mediaOptions = document.getElementById('media-style-options');
-            if (style === 'text') {
-                textOptions.classList.remove('hidden');
-                mediaOptions.classList.add('hidden');
-            } else {
-                textOptions.classList.add('hidden');
-                mediaOptions.classList.remove('hidden');
-            }
-            updatePreviewFromUI();
         }
 
         function save() {
-            const workDuration = parseInt(document.getElementById('work_duration').value);
-            const breakDuration = parseInt(document.getElementById('break_duration').value);
-
-            if (breakDuration > 120) {
-                showNotification("Invalid Duration", "Break duration cannot exceed 120 minutes (2 hours).");
-                return;
-            }
-
-            if (workDuration > 240) {
-                showNotification("Invalid Duration", "Work duration cannot exceed 240 minutes (4 hours).");
-                return;
-            }
-
             const settings = {
-                work_duration_secs: workDuration * 60,
-                break_duration_secs: breakDuration * 60,
+                work_duration_secs: document.getElementById('work_duration').value * 60,
+                break_duration_secs: document.getElementById('break_duration').value * 60,
                 mode: document.getElementById('mode').value,
                 autostart: document.getElementById('autostart').checked,
                 overlay_animation: currentMediaPath || "default.webm",
@@ -860,9 +536,12 @@
                 text_animation: document.getElementById('text_animation').value,
                 text_rotation_x: parseInt(document.getElementById('text_rotation_x').value),
                 text_rotation_y: parseInt(document.getElementById('text_rotation_y').value),
+                text_rotation_z: parseInt(document.getElementById('text_rotation_z').value),
                 text_color: document.getElementById('text_color').value,
                 text_opacity: parseFloat(document.getElementById('text_opacity').value),
                 text_glow: parseFloat(document.getElementById('text_glow').value),
+                text_glow_enabled: document.getElementById('text_glow_enabled').checked,
+                text_glow_color: document.getElementById('text_glow_color').value,
                 text_depth: parseInt(document.getElementById('text_depth').value),
                 adaptive_text_color: document.getElementById('adaptive_text_color').checked
             };
@@ -874,136 +553,42 @@
                 const s = event.data.settings;
                 document.getElementById('work_duration').value = s.work_duration_secs / 60;
                 document.getElementById('break_duration').value = s.break_duration_secs / 60;
-                document.getElementById('mode').value = s.mode;
-                document.getElementById('autostart').checked = s.autostart;
-                document.getElementById('randomize_messages').checked = s.randomize_messages;
-                document.getElementById('show_work_status').checked = s.show_work_duration_status !== false;
-                document.getElementById('bubble_opacity').value = s.bubble_opacity || 0.1;
-                document.getElementById('bubble_size').value = s.bubble_size || 580;
-                document.getElementById('bubble_pos_x').value = s.bubble_pos_x || 5;
-                document.getElementById('bubble_pos_y').value = s.bubble_pos_y || 5;
-                document.getElementById('animation_style').value = s.animation_style || "float";
-                document.getElementById('break_style').value = s.break_style || "media";
+                document.getElementById('bubble_opacity').value = s.bubble_opacity;
+                document.getElementById('bubble_size').value = s.bubble_size;
+                document.getElementById('bubble_pos_x').value = s.bubble_pos_x;
+                document.getElementById('bubble_pos_y').value = s.bubble_pos_y;
+                document.getElementById('animation_style').value = s.animation_style;
+                document.getElementById('break_style').value = s.break_style || "text";
                 document.getElementById('custom_text').value = s.custom_text || "PAUSE";
                 document.getElementById('video_volume').value = s.video_volume ?? 0.0;
                 document.getElementById('text_animation').value = s.text_animation || "float";
                 document.getElementById('text_rotation_x').value = s.text_rotation_x ?? 20;
                 document.getElementById('text_rotation_y').value = s.text_rotation_y ?? -20;
+                document.getElementById('text_rotation_z').value = s.text_rotation_z ?? 0;
                 document.getElementById('text_color').value = s.text_color || "#ffffff";
                 document.getElementById('text_opacity').value = s.text_opacity ?? 0.15;
                 document.getElementById('text_glow').value = s.text_glow ?? 10;
+                document.getElementById('text_glow_enabled').checked = s.text_glow_enabled !== false;
+                document.getElementById('text_glow_color').value = s.text_glow_color || "#ffffff";
                 document.getElementById('text_depth').value = s.text_depth ?? 5;
                 document.getElementById('adaptive_text_color').checked = s.adaptive_text_color !== false;
                 
-                // Status Footer Updates
-                document.getElementById('app-version').innerText = `v${event.data.version}`;
-                const assetDot = document.getElementById('asset-dot');
-                const assetLabel = document.getElementById('asset-label');
-                if (event.data.assetReady) {
-                    assetDot.className = 'status-dot dot-ready';
-                    assetLabel.innerText = 'Cinematic Assets: Ready';
-                } else {
-                    assetDot.className = 'status-dot dot-missing';
-                    assetLabel.innerText = 'Cinematic Assets: Syncing...';
-                }
-
-                if (event.data.logoPath) {
-                    document.getElementById('header-logo').src = event.data.logoPath;
-                }
-
-                toggleBreakStyle();
-
-                if (s.overlay_animation) updatePreview(s.overlay_animation);
-                currentWhitelist = s.whitelist || []; renderList('whitelist-tags', currentWhitelist, 'whitelist');
-                currentBreakMessages = s.break_messages || ["Breathe In..."]; renderList('break-messages-tags', currentBreakMessages, 'messages');
                 isDarkMode = event.data.isDark;
-                if (isDarkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark');
-                window.chrome.webview.postMessage({ action: "get_apps" });
-                updatePreviewFromUI();
-            } else if (event.data.action === "media_selected") {
-                updatePreview(event.data.path);
-            } else if (event.data.action === "theme_changed") {
-                isDarkMode = event.data.isDark; if (isDarkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark'); updatePreviewFromUI();
-            } else if (event.data.action === "apps_list") {
-                const select = document.getElementById('running-apps-select');
-                select.innerHTML = '<option value="">Select app...</option>';
-                event.data.apps.forEach(app => {
-                    const opt = document.createElement('option'); opt.value = app; opt.textContent = app; select.appendChild(opt);
-                });
-            } else if (event.data.action === "update_status") {
-                const btn = document.getElementById('check-update-btn');
-                btn.disabled = false; btn.innerText = "Check for Updates";
-                if (event.data.info.available) {
-                    showUpdateModal(event.data.info.latest_version);
-                } else {
-                    showNotification("Up to Date", "PauseCat is already running the latest version.");
-                }
-            } else if (event.data.action === "update_progress") {
-                const progress = event.data.percentage;
-                document.getElementById('update-progress-bar').style.width = progress + "%";
-                document.getElementById('update-progress-label').innerText = `Downloading... ${progress}%`;
-            } else if (event.data.action === "update_error") {
-                const btn = document.getElementById('check-update-btn');
-                btn.disabled = false; btn.innerText = "Check for Updates";
-                hideUpdateModal();
-                showNotification("Update Error", event.data.error);
-            } else if (event.data.action === "asset_synced") {
-                const assetDot = document.getElementById('asset-dot');
-                const assetLabel = document.getElementById('asset-label');
-                assetDot.className = 'status-dot dot-ready';
-                assetLabel.innerText = 'Cinematic Assets: Ready';
-                const container = document.getElementById('asset-status');
-                const oldProgress = container.querySelector('.asset-progress-container');
-                if (oldProgress) oldProgress.remove();
-                const oldRetry = document.getElementById('asset-retry-btn');
-                if (oldRetry) oldRetry.remove();
-                updatePreview(currentMediaPath);
-            } else if (event.data.action === "asset_progress") {
-                const container = document.getElementById('asset-status');
-                let progressContainer = container.querySelector('.asset-progress-container');
-                if (!progressContainer) {
-                    progressContainer = document.createElement('div');
-                    progressContainer.className = 'asset-progress-container';
-                    progressContainer.innerHTML = '<div class="asset-progress-bar"></div>';
-                    container.appendChild(progressContainer);
-                }
-                const bar = progressContainer.querySelector('.asset-progress-bar');
-                bar.style.width = event.data.percentage + "%";
-                document.getElementById('asset-label').innerText = `Cinematic Assets: Syncing (${event.data.percentage}%)`;
-            } else if (event.data.action === "asset_error") {
-                const assetDot = document.getElementById('asset-dot');
-                const assetLabel = document.getElementById('asset-label');
-                assetDot.className = 'status-dot dot-error';
-                assetLabel.innerText = 'Cinematic Assets: Failed';
-                
-                const container = document.getElementById('asset-status');
-                if (!document.getElementById('asset-retry-btn')) {
-                    const retryBtn = document.createElement('button');
-                    retryBtn.id = 'asset-retry-btn';
-                    retryBtn.className = 'retry-btn';
-                    retryBtn.innerText = 'Retry';
-                    retryBtn.onclick = retrySync;
-                    container.appendChild(retryBtn);
-                }
+                toggleBreakStyle();
             }
         });
 
+        function selectMedia() { window.chrome.webview.postMessage({ action: "select_media" }); }
+        function startUpdate() { window.chrome.webview.postMessage({ action: "start_update" }); }
         function updatePreview(path) {
             currentMediaPath = path;
-            const empty = document.getElementById('media-empty');
-            const img = document.getElementById('preview-img');
-            const video = document.getElementById('preview-video');
-            const resetBtn = document.getElementById('reset-btn');
-            const liveImg = document.getElementById('live-preview-bg-img');
-            const liveVid = document.getElementById('live-preview-bg-vid');
-            [empty, img, video, liveImg, liveVid].forEach(el => el.classList.add('hidden'));
-            if (path === "default.webm") resetBtn.classList.add('hidden'); else resetBtn.classList.remove('hidden');
-            const formattedPath = (path === "default.webm") ? "https://pausecat.app/assets/default.webm" : (path.startsWith('https://') ? path : 'https://pausecat.app/local/' + btoa(path));
-            const ext = path.split('.').pop().toLowerCase();
-            if (['mp4', 'webm', 'ogg'].includes(ext)) {
-                video.src = formattedPath; video.classList.remove('hidden'); liveVid.src = formattedPath; liveVid.classList.remove('hidden'); video.play().catch(() => {});
+            const vid = document.getElementById('live-preview-bg-vid');
+            const img = document.getElementById('live-preview-bg-img');
+            vid.classList.add('hidden'); img.classList.add('hidden');
+            if (path.endsWith('.webm') || path.endsWith('.mp4')) {
+                vid.src = path; vid.classList.remove('hidden');
             } else {
-                img.src = formattedPath; img.classList.remove('hidden'); liveImg.src = formattedPath; liveImg.classList.remove('hidden');
+                img.src = path; img.classList.remove('hidden');
             }
         }
     </script>

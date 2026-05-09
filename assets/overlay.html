@@ -165,11 +165,11 @@
             color: var(--text-color, #fff);
             text-transform: uppercase;
             letter-spacing: -0.05em;
-            transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg));
+            transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg));
             
             /* High-Fidelity Shadow / Extrusion / Glow */
             text-shadow: var(--text-3d-shadow);
-            filter: drop-shadow(0 0 var(--text-glow-radius, 10px) var(--text-color, #fff));
+            filter: var(--text-glow-filter, none);
             
             opacity: var(--text-opacity, 0.15);
             user-select: none;
@@ -178,23 +178,23 @@
         }
 
         @keyframes textFloat {
-            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) translateZ(0); }
-            50% { transform: rotateX(calc(var(--rot-x, 20deg) + 5deg)) rotateY(calc(var(--rot-y, -20deg) + 5deg)) translateZ(50px); }
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) translateZ(0); }
+            50% { transform: rotateX(calc(var(--rot-x, 20deg) + 5deg)) rotateY(calc(var(--rot-y, -20deg) + 5deg)) rotateZ(var(--rot-z, 0deg)) translateZ(50px); }
         }
 
         @keyframes textRotate {
-            0% { transform: rotateX(var(--rot-x, 20deg)) rotateY(0deg); }
-            100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(360deg); }
+            0% { transform: rotateX(var(--rot-x, 20deg)) rotateY(0deg) rotateZ(var(--rot-z, 0deg)); }
+            100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(360deg) rotateZ(var(--rot-z, 0deg)); }
         }
 
         @keyframes textSwing {
-            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(-40deg); }
-            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(40deg); }
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(-40deg) rotateZ(var(--rot-z, 0deg)); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(40deg) rotateZ(var(--rot-z, 0deg)); }
         }
 
         @keyframes textPulse {
-            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) scale(1); opacity: var(--text-opacity, 0.15); }
-            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) scale(1.1); opacity: calc(var(--text-opacity, 0.15) + 0.1); }
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) scale(1); opacity: var(--text-opacity, 0.15); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) scale(1.1); opacity: calc(var(--text-opacity, 0.15) + 0.1); }
         }
     </style>
 </head>
@@ -259,10 +259,12 @@
         function generate3DShadow(color, depth) {
             let shadows = [];
             for (let i = 1; i <= depth; i++) {
-                shadows.push(`${i}px ${i}px 0px ${adjustColor(color, -i * 5)}`);
+                // Heavier extrusion with gradual darkening
+                let shadowColor = adjustColor(color, -i * 6);
+                shadows.push(`${i}px ${i}px 0px ${shadowColor}`);
             }
-            shadows.push(`0 ${depth + 1}px 10px rgba(0,0,0,0.4)`);
-            shadows.push(`0 ${depth + 5}px 20px rgba(0,0,0,0.2)`);
+            shadows.push(`0 ${depth + 1}px 15px rgba(0,0,0,0.5)`);
+            shadows.push(`0 ${depth + 8}px 30px rgba(0,0,0,0.3)`);
             return shadows.join(', ');
         }
 
@@ -325,7 +327,16 @@
                 root.style.setProperty('--text-opacity', event.data.textOpacity ?? 0.15);
                 root.style.setProperty('--rot-x', (event.data.textRotationX ?? 20) + 'deg');
                 root.style.setProperty('--rot-y', (event.data.textRotationY ?? -20) + 'deg');
-                root.style.setProperty('--text-glow-radius', (event.data.textGlow ?? 10) + 'px');
+                root.style.setProperty('--rot-z', (event.data.textRotationZ ?? 0) + 'deg');
+                
+                // Glow Logic
+                if (event.data.textGlowEnabled) {
+                    const glowColor = event.data.textGlowColor || finalColor;
+                    root.style.setProperty('--text-glow-filter', `drop-shadow(0 0 ${(event.data.textGlow ?? 10)}px ${glowColor})`);
+                } else {
+                    root.style.setProperty('--text-glow-filter', 'none');
+                }
+
                 root.style.setProperty('--text-3d-shadow', generate3DShadow(finalColor, event.data.textDepth ?? 5));
 
                 const textAnim = event.data.textAnimation || 'float';
@@ -376,6 +387,7 @@
                 if (event.data.mediaPath && event.data.breakStyle !== 'text') {
                     const img = document.getElementById('bg-image');
                     const video = document.getElementById('bg-video');
+                    const fallback = document.getElementById('fallback-ui');
                     const ext = event.data.mediaPath.split('.').pop().toLowerCase();
 
                     video.onerror = () => {
