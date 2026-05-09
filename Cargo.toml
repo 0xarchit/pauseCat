@@ -25,27 +25,15 @@ windows = { version = "0.62", features = [
     "Win32_System_Variant",
     "Win32_System_Memory",
     "Win32_System_Com_StructuredStorage",
-    "Win32_Graphics_Direct2D",
-    "Win32_Graphics_Direct2D_Common",
-    "Win32_Graphics_Direct3D11",
-    "Win32_Graphics_Dxgi",
-    "Win32_Graphics_Direct3D",
-    "Media",
+    "Win32_Networking_WinHttp",
+    "Win32_Storage_FileSystem",
     "Media_Control",
     "Foundation",
 ] }
 webview2-com = "0.39"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-image = "0.24"
-winreg = "0.51"
-dirs = "5.0"
-log = "0.4"
-env_logger = "0.10"
-thiserror = "1.0"
-lazy_static = "1.4"
-base64 = "0.21"
-reqwest = { version = "0.11", features = ["blocking", "json"] }
+log = { version = "0.4", features = ["std"] }
 semver = "1.0"
 
 [build-dependencies]

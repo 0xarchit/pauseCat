@@ -1,12 +1,31 @@
 #![windows_subsystem = "windows"]
 
-use windows::Win32::UI::WindowsAndMessaging::*;
-use windows::Win32::Foundation::*;
 use pausecat::app::App;
+use pausecat::settings::Settings;
+
+struct SimpleFileLogger {
+    file: std::sync::Mutex<std::fs::File>,
+}
+
+impl log::Log for SimpleFileLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= log::Level::Info
+    }
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            if let Ok(mut file) = self.file.lock() {
+                use std::io::Write;
+                let _ = writeln!(file, "[{}] {}", 
+                    record.level(), 
+                    record.args());
+            }
+        }
+    }
+    fn flush(&self) {}
+}
 
 fn setup_logging() -> windows::core::Result<()> {
-    let mut path = dirs::config_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
-    path.push("PauseCat");
+    let mut path = Settings::get_config_dir();
     let _ = std::fs::create_dir_all(&path);
     path.push("app.log");
     
@@ -16,97 +35,31 @@ fn setup_logging() -> windows::core::Result<()> {
         .open(&path)
         .map_err(|e| windows::core::Error::from_hresult(windows::core::HRESULT(e.raw_os_error().unwrap_or(-1) as i32)))?;
 
-    let target = Box::new(file);
-    env_logger::Builder::from_default_env()
-        .target(env_logger::Target::Pipe(target))
-        .filter_level(log::LevelFilter::Info)
-        .init();
+    let logger = SimpleFileLogger { file: std::sync::Mutex::new(file) };
+    let _ = log::set_boxed_logger(Box::new(logger));
+    log::set_max_level(log::LevelFilter::Info);
 
-    log::info!("PauseCat started (Optimized)");
+    log::info!("PauseCat started (Ultra-Optimized)");
     Ok(())
 }
 
-fn check_webview2() -> windows::core::Result<bool> {
-    use webview2_com::Microsoft::Web::WebView2::Win32::*;
-    unsafe {
-        let mut version = windows::core::PWSTR::null();
-        let result = GetAvailableCoreWebView2BrowserVersionString(windows::core::PCWSTR::null(), &mut version);
-        let exists = result.is_ok();
-        if !version.is_null() {
-            windows::Win32::System::Com::CoTaskMemFree(Some(version.0 as *const _));
-        }
-        Ok(exists)
-    }
-}
-
-pub fn is_settings_mode() -> bool {
-    std::env::args().any(|arg| arg == "--settings")
-}
-
 fn main() -> windows::core::Result<()> {
-    let _ = setup_logging();
-
     unsafe {
-        use windows::Win32::System::Threading::CreateMutexW;
-        let _handle = CreateMutexW(None, true, windows::core::w!("Global\\PauseCatSingleInstanceMutex"));
-        if GetLastError() == ERROR_ALREADY_EXISTS {
-            return Ok(());
-        }
+        let _ = windows::Win32::System::Com::CoInitializeEx(None, windows::Win32::System::Com::COINIT_APARTMENTTHREADED);
+        let _ = setup_logging();
+        let mut app = App::new();
+        app.run()?;
+        windows::Win32::System::Com::CoUninitialize();
     }
-
-    match check_webview2() {
-        Ok(true) => log::info!("WebView2 found."),
-        _ => {
-            unsafe {
-                MessageBoxW(
-                    None,
-                    windows::core::w!("PauseCat requires WebView2 Runtime."),
-                    windows::core::w!("Error"),
-                    MB_OK | MB_ICONERROR,
-                );
-            }
-            return Ok(());
-        }
-    }
-
-    let mut app = App::new();
-    if let Err(e) = app.init() {
-        return Err(e);
-    }
-
-    if is_settings_mode() {
-        app.handle_event(pausecat::events::AppEvent::OpenSettings);
-    }
-
-    unsafe {
-        let _ = SetTimer(None, 1, 100, None);
-
-        let mut msg = MSG::default();
-        while GetMessageW(&mut msg, None, 0, 0).into() {
-            let _ = TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-            app.drain_events();
-        }
-    }
-
     Ok(())
 }
 
 #[cfg(test)]
-mod internal_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn test_main_helpers_smoke() {
-        let _ = check_webview2();
-        let _ = setup_logging();
-        
-        // Mock args for is_settings_mode
-        let _ = is_settings_mode();
-    }
-    
-    #[test]
-    fn test_mutex_logic_smoke() {
+    fn test_main_startup_smoke() {
         unsafe {
             use windows::Win32::System::Threading::CreateMutexW;
             let mutex_name = windows::core::w!("Global\\PauseCatTestMutex");

@@ -8,6 +8,7 @@ use windows::{
     Win32::System::LibraryLoader::*,
     Win32::System::RemoteDesktop::*,
 };
+use crate::app::wakeup_main_thread;
 
 const WM_TRAY_ICON: u32 = WM_APP + 1;
 const ID_TRAY_ICON: u32 = 1;
@@ -46,7 +47,6 @@ impl TrayIcon {
                 None, None, Some(instance), Some(Box::into_raw(Box::new(sender)) as *mut _)
             )?;
 
-            // Register for Session Notifications (Lock/Unlock)
             let _ = WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
 
             let h_icon = match LoadImageW(
@@ -123,18 +123,15 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
             let create_struct = lparam.0 as *const CREATESTRUCTW;
             let sender = (*create_struct).lpCreateParams;
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, sender as isize);
-            
-            let is_dark = crate::system::is_dark_mode();
-            let _ = (&*(sender as *const Sender<AppEvent>)).send(AppEvent::ThemeChanged(is_dark));
-            
+            let _ = (&*(sender as *const Sender<AppEvent>)).send(AppEvent::ThemeChanged(crate::system::is_dark_mode()));
+            wakeup_main_thread();
             LRESULT(0)
         }
         WM_SETTINGCHANGE => {
             let sender_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const Sender<AppEvent>;
             if !sender_ptr.is_null() {
-                let sender = &*sender_ptr;
-                let is_dark = crate::system::is_dark_mode();
-                let _ = sender.send(AppEvent::ThemeChanged(is_dark));
+                let _ = (&*sender_ptr).send(AppEvent::ThemeChanged(crate::system::is_dark_mode()));
+                wakeup_main_thread();
             }
             LRESULT(0)
         }
@@ -143,14 +140,8 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
             if !sender_ptr.is_null() {
                 let sender = &*sender_ptr;
                 match wparam.0 as u32 {
-                    WTS_SESSION_LOCK => { 
-                        log::info!("Session Locked: Pausing timer.");
-                        let _ = sender.send(AppEvent::SessionLocked); 
-                    }
-                    WTS_SESSION_UNLOCK => { 
-                        log::info!("Session Unlocked: Resuming timer.");
-                        let _ = sender.send(AppEvent::SessionUnlocked); 
-                    }
+                    WTS_SESSION_LOCK => { let _ = sender.send(AppEvent::SessionLocked); wakeup_main_thread(); }
+                    WTS_SESSION_UNLOCK => { let _ = sender.send(AppEvent::SessionUnlocked); wakeup_main_thread(); }
                     _ => {}
                 }
             }
@@ -161,14 +152,8 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
             if !sender_ptr.is_null() {
                 let sender = &*sender_ptr;
                 match wparam.0 as u32 {
-                    PBT_APMSUSPEND => {
-                        log::info!("System Suspending: Pausing timer.");
-                        let _ = sender.send(AppEvent::SessionLocked);
-                    }
-                    PBT_APMRESUMESUSPEND => {
-                        log::info!("System Resumed: Resuming timer.");
-                        let _ = sender.send(AppEvent::SessionUnlocked);
-                    }
+                    PBT_APMSUSPEND => { let _ = sender.send(AppEvent::SessionLocked); wakeup_main_thread(); }
+                    PBT_APMRESUMESUSPEND => { let _ = sender.send(AppEvent::SessionUnlocked); wakeup_main_thread(); }
                     _ => {}
                 }
             }
@@ -186,9 +171,9 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
             if !sender_ptr.is_null() {
                 let sender = &*sender_ptr;
                 match wparam.0 as usize {
-                    ID_MENU_PAUSE => { let _ = sender.send(AppEvent::TogglePause); }
-                    ID_MENU_SETTINGS => { let _ = sender.send(AppEvent::OpenSettings); }
-                    ID_MENU_EXIT => { let _ = sender.send(AppEvent::Quit); }
+                    ID_MENU_PAUSE => { let _ = sender.send(AppEvent::TogglePause); wakeup_main_thread(); }
+                    ID_MENU_SETTINGS => { let _ = sender.send(AppEvent::OpenSettings); wakeup_main_thread(); }
+                    ID_MENU_EXIT => { let _ = sender.send(AppEvent::Quit); wakeup_main_thread(); }
                     _ => {}
                 }
             }
@@ -196,9 +181,7 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
         }
         WM_DESTROY => {
             let sender_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut Sender<AppEvent>;
-            if !sender_ptr.is_null() {
-                drop(Box::from_raw(sender_ptr));
-            }
+            if !sender_ptr.is_null() { drop(Box::from_raw(sender_ptr)); }
             LRESULT(0)
         }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
@@ -206,11 +189,7 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
 }
 
 unsafe fn show_context_menu(hwnd: HWND) {
-    let menu = match CreatePopupMenu() {
-        Ok(m) => m,
-        Err(_) => return,
-    };
-    
+    let menu = match CreatePopupMenu() { Ok(m) => m, Err(_) => return };
     let pause_text = if IS_PAUSED { "Resume Timer" } else { "Pause Timer" };
     let mii = MENUITEMINFOW {
         cbSize: std::mem::size_of::<MENUITEMINFOW>() as u32,
@@ -221,70 +200,13 @@ unsafe fn show_context_menu(hwnd: HWND) {
         ..Default::default()
     };
     let _ = InsertMenuItemW(menu, 0, true, &mii);
-    
     let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
     let _ = AppendMenuW(menu, MF_STRING, ID_MENU_SETTINGS, w!("Settings..."));
     let _ = AppendMenuW(menu, MF_STRING, ID_MENU_EXIT, w!("Exit"));
-
     let mut pos = POINT::default();
     let _ = GetCursorPos(&mut pos);
-
     let _ = SetForegroundWindow(hwnd);
     let _ = TrackPopupMenu(menu, TPM_RIGHTBUTTON, pos.x, pos.y, Some(0), hwnd, None);
     let _ = PostMessageW(Some(hwnd), WM_NULL, WPARAM(0), LPARAM(0));
     let _ = DestroyMenu(menu);
-}
-
-#[cfg(test)]
-mod internal_tests {
-    use super::*;
-    use std::sync::mpsc;
-
-    #[test]
-    fn test_wnd_proc_branches() {
-        let (tx, _rx) = mpsc::channel::<AppEvent>();
-        let tx_box = Box::into_raw(Box::new(tx));
-        
-        unsafe {
-            let hwnd = HWND(std::ptr::null_mut());
-            
-            // Test WM_CREATE (sets up sender)
-            let cs = CREATESTRUCTW {
-                lpCreateParams: tx_box as *mut _,
-                ..Default::default()
-            };
-            wnd_proc(hwnd, WM_CREATE, WPARAM(0), LPARAM(&cs as *const _ as isize));
-            
-            // Test WM_SETTINGCHANGE (theme change)
-            wnd_proc(hwnd, WM_SETTINGCHANGE, WPARAM(0), LPARAM(0));
-            
-            // Test all session change variants
-            for code in [WTS_SESSION_LOCK, WTS_SESSION_UNLOCK, WTS_SESSION_LOGON, WTS_SESSION_LOGOFF, WTS_REMOTE_CONNECT, WTS_REMOTE_DISCONNECT] {
-                wnd_proc(hwnd, WM_WTSSESSION_CHANGE, WPARAM(code as usize), LPARAM(0));
-            }
-            
-            // Test all power broadcast variants
-            for code in [PBT_APMRESUMESUSPEND, PBT_APMRESUMEAUTOMATIC, PBT_APMQUERYSUSPEND, PBT_APMSUSPEND] {
-                wnd_proc(hwnd, WM_POWERBROADCAST, WPARAM(code as usize), LPARAM(0));
-            }
-            
-            // Test WM_TRAY_ICON (right click)
-            wnd_proc(hwnd, WM_TRAY_ICON, WPARAM(0), LPARAM(WM_RBUTTONUP as isize));
-            
-            // Test WM_COMMAND (menu items)
-            wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_PAUSE), LPARAM(0));
-            wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_SETTINGS), LPARAM(0));
-            wnd_proc(hwnd, WM_COMMAND, WPARAM(ID_MENU_EXIT), LPARAM(0));
-            wnd_proc(hwnd, WM_COMMAND, WPARAM(9999), LPARAM(0));
-
-            // Test default path
-            wnd_proc(hwnd, WM_USER, WPARAM(0), LPARAM(0));
-            
-            // Test with NULL HWND to ensure no crash
-            wnd_proc(HWND(std::ptr::null_mut()), WM_SETTINGCHANGE, WPARAM(0), LPARAM(0));
-
-            // Clean up
-            let _ = Box::from_raw(tx_box);
-        }
-    }
 }

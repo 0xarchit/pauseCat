@@ -20,7 +20,7 @@ struct SendSafeHwnd(isize);
 unsafe impl Send for SendSafeHwnd {}
 
 impl OverlayWindow {
-    pub fn new(sender: Sender<AppEvent>, width: i32, height: i32, blurred_data: Vec<u8>, settings: Settings) -> Result<Self> {
+    pub fn new(sender: Sender<AppEvent>, screen_width: i32, screen_height: i32, blurred_width: i32, blurred_height: i32, blurred_data: Vec<u8>, settings: Settings) -> Result<Self> {
         unsafe {
             let instance = GetModuleHandleW(None)?.into();
             let class_name = w!("PauseCatOverlayClass");
@@ -41,26 +41,25 @@ impl OverlayWindow {
                 class_name,
                 w!("PauseCat Overlay"),
                 WS_POPUP,
-                0, 0, width, height,
+                0, 0, screen_width, screen_height,
                 None, None, Some(instance), None
             )?;
 
             SetPropW(hwnd, w!("Sender"), Some(HANDLE(Box::into_raw(Box::new(sender)) as *mut _)))?;
 
-            // Apply immersive dark mode immediately after creation
             let is_dark = crate::system::is_dark_mode();
             crate::system::apply_immersive_dark_mode(hwnd, is_dark);
 
             let hdc = GetDC(Some(hwnd));
             let mem_dc = CreateCompatibleDC(Some(hdc));
-            let h_bitmap = CreateCompatibleBitmap(hdc, width, height);
+            let h_bitmap = CreateCompatibleBitmap(hdc, screen_width, screen_height);
             let _ = SelectObject(mem_dc, h_bitmap.into());
 
             let bmi = BITMAPINFO {
                 bmiHeader: BITMAPINFOHEADER {
                     biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-                    biWidth: width,
-                    biHeight: -height, 
+                    biWidth: blurred_width,
+                    biHeight: -blurred_height, 
                     biPlanes: 1,
                     biBitCount: 32,
                     biCompression: BI_RGB.0,
@@ -69,8 +68,10 @@ impl OverlayWindow {
                 ..Default::default()
             };
 
+            SetStretchBltMode(mem_dc, COLORONCOLOR);
+
             let _ = StretchDIBits(
-                mem_dc, 0, 0, width, height, 0, 0, width, height,
+                mem_dc, 0, 0, screen_width, screen_height, 0, 0, blurred_width, blurred_height,
                 Some(blurred_data.as_ptr() as *const _),
                 &bmi, DIB_RGB_COLORS, SRCCOPY
             );
@@ -84,7 +85,7 @@ impl OverlayWindow {
 
             let pt_src = POINT { x: 0, y: 0 };
             let pt_dst = POINT { x: 0, y: 0 };
-            let size = SIZE { cx: width, cy: height };
+            let size = SIZE { cx: screen_width, cy: screen_height };
 
             let _ = UpdateLayeredWindow(hwnd, Some(hdc), Some(&pt_dst), Some(&size), Some(mem_dc), Some(&pt_src), COLORREF(0), Some(&blend), ULW_ALPHA);
 
@@ -185,10 +186,10 @@ mod internal_tests {
         // We can't easily create a real window in tests without it being flaky,
         // but we can test the structure.
         let (tx, _rx) = mpsc::channel::<AppEvent>();
-        let blurred_data = vec![0u8; 100];
+        let blurred_data = vec![0u8; 400]; // 10*10*4
         let settings = Settings::default();
         
-        if let Ok(overlay) = OverlayWindow::new(tx, 10, 10, blurred_data, settings) {
+        if let Ok(overlay) = OverlayWindow::new(tx, 10, 10, 10, 10, blurred_data, settings) {
             overlay.fade_in();
             std::thread::sleep(std::time::Duration::from_millis(100));
         }

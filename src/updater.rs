@@ -1,6 +1,5 @@
 use std::fs;
 use std::thread;
-use std::io::Read;
 use serde::{Deserialize, Serialize};
 use semver::Version;
 use crate::settings::Settings;
@@ -8,7 +7,8 @@ use std::sync::mpsc::Sender;
 use crate::events::AppEvent;
 use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
-use windows::core::HSTRING;
+use windows::core::{HSTRING, PCWSTR};
+use windows::Win32::Networking::WinHttp::*;
 
 const GITHUB_API_URL: &str = "https://api.github.com/repos/0xarchit/pauseCat/releases/latest";
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -34,11 +34,133 @@ pub struct UpdateInfo {
     pub changelog: String,
 }
 
+struct WinHttpHandle(*mut core::ffi::c_void);
+impl Drop for WinHttpHandle {
+    fn drop(&mut self) {
+        if !self.0.is_null() { unsafe { let _ = WinHttpCloseHandle(self.0); } }
+    }
+}
+
+fn winhttp_get(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    unsafe {
+        let h_session = WinHttpHandle(WinHttpOpen(
+            windows::core::w!("PauseCat-Updater/1.0"),
+            WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+            None,
+            None,
+            0,
+        ));
+        if h_session.0.is_null() { 
+            let err = windows::core::Error::from_thread();
+            log::error!("WinHttpOpen failed: {:?}", err);
+            return Err(format!("WinHttpOpen failed: {:?}", err).into()); 
+        }
+
+        let _ = WinHttpSetTimeouts(h_session.0, 5000, 5000, 10000, 10000);
+
+        let mut url_components = URL_COMPONENTS {
+            dwStructSize: std::mem::size_of::<URL_COMPONENTS>() as u32,
+            dwHostNameLength: u32::MAX,
+            dwUrlPathLength: u32::MAX,
+            dwExtraInfoLength: u32::MAX,
+            ..Default::default()
+        };
+
+        let url_u16: Vec<u16> = url.encode_utf16().chain(std::iter::once(0)).collect();
+        if let Err(e) = WinHttpCrackUrl(&url_u16, 0, &mut url_components) {
+            log::error!("WinHttpCrackUrl failed for {}: {:?}", url, e);
+            return Err(e.into());
+        }
+
+        let host_name_u16: Vec<u16> = std::slice::from_raw_parts(url_components.lpszHostName.0, url_components.dwHostNameLength as usize)
+            .iter().copied().chain(std::iter::once(0)).collect();
+        let path_name_u16: Vec<u16> = std::slice::from_raw_parts(url_components.lpszUrlPath.0, url_components.dwUrlPathLength as usize)
+            .iter().copied().chain(std::iter::once(0)).collect();
+
+        let h_connect = WinHttpHandle(WinHttpConnect(h_session.0, PCWSTR(host_name_u16.as_ptr()), url_components.nPort, 0));
+        if h_connect.0.is_null() { 
+            let err = windows::core::Error::from_thread();
+            log::error!("WinHttpConnect failed for {:?}: {:?}", host_name_u16, err);
+            return Err(format!("WinHttpConnect failed: {:?}", err).into()); 
+        }
+
+        let h_request = WinHttpHandle(WinHttpOpenRequest(
+            h_connect.0,
+            windows::core::w!("GET"),
+            PCWSTR(path_name_u16.as_ptr()),
+            None,
+            None,
+            std::ptr::null(),
+            if url.starts_with("https") { WINHTTP_FLAG_SECURE } else { WINHTTP_OPEN_REQUEST_FLAGS(0) },
+        ));
+        if h_request.0.is_null() { 
+            let err = windows::core::Error::from_thread();
+            log::error!("WinHttpOpenRequest failed: {:?}", err);
+            return Err(format!("WinHttpOpenRequest failed: {:?}", err).into()); 
+        }
+
+        let headers = windows::core::w!("Accept: application/vnd.github+json\r\nUser-Agent: PauseCat-Updater-v1\r\n");
+        let _ = WinHttpAddRequestHeaders(h_request.0, headers.as_wide(), WINHTTP_ADDREQ_FLAG_ADD);
+
+        if let Err(e) = WinHttpSendRequest(h_request.0, None, None, 0, 0, 0) {
+            log::error!("WinHttpSendRequest failed: {:?}", e);
+            return Err(e.into());
+        }
+
+        if let Err(e) = WinHttpReceiveResponse(h_request.0, std::ptr::null_mut()) {
+            log::error!("WinHttpReceiveResponse failed: {:?}", e);
+            return Err(e.into());
+        }
+
+        let mut status_code: u32 = 0;
+        let mut dw_size = std::mem::size_of::<u32>() as u32;
+        WinHttpQueryHeaders(
+            h_request.0,
+            WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+            None,
+            Some(&mut status_code as *mut _ as *mut _),
+            &mut dw_size,
+            std::ptr::null_mut(),
+        )?;
+
+        if status_code == 301 || status_code == 302 || status_code == 307 || status_code == 308 {
+             let mut redirect_url = [0u16; 4096];
+             let mut dw_size = 8192u32;
+             WinHttpQueryHeaders(h_request.0, WINHTTP_QUERY_LOCATION, None, Some(redirect_url.as_mut_ptr() as *mut _), &mut dw_size, std::ptr::null_mut())?;
+             let new_url = String::from_utf16_lossy(&redirect_url[.. (dw_size as usize / 2)]).trim_matches('\0').to_string();
+             return winhttp_get(&new_url);
+        }
+
+        if status_code != 200 { 
+            log::error!("HTTP Error: {} for {}", status_code, url);
+            return Err(format!("HTTP Error: {}", status_code).into()); 
+        }
+
+        let mut response_data = Vec::new();
+        let mut dw_size: u32 = 0;
+        loop {
+            WinHttpQueryDataAvailable(h_request.0, &mut dw_size as *mut _)?;
+            if dw_size == 0 { break; }
+            let mut buffer = vec![0u8; dw_size as usize];
+            let mut dw_read: u32 = 0;
+            WinHttpReadData(h_request.0, buffer.as_mut_ptr() as *mut _, dw_size, &mut dw_read)?;
+            response_data.extend_from_slice(&buffer[..dw_read as usize]);
+        }
+
+        Ok(response_data)
+    }
+}
+
+pub fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error>> {
+    let data = winhttp_get(GITHUB_API_URL)?;
+    let release: GithubRelease = serde_json::from_slice(&data)?;
+    parse_and_check_version(&release, APP_VERSION)
+}
+
 pub fn parse_and_check_version(release_json: &GithubRelease, current_version: &str) -> Result<UpdateInfo, Box<dyn std::error::Error>> {
     let latest_ver_str = release_json.tag_name.trim_start_matches('v');
-    let current_ver = Version::parse(current_version)?;
-    let latest_ver = Version::parse(latest_ver_str)?;
-
+    let current_ver = Version::parse(current_version).unwrap_or_else(|_| Version::new(1, 0, 0));
+    let latest_ver = Version::parse(latest_ver_str).unwrap_or_else(|_| Version::new(1, 0, 0));
     Ok(UpdateInfo {
         available: latest_ver > current_ver,
         latest_version: release_json.tag_name.clone(),
@@ -46,283 +168,100 @@ pub fn parse_and_check_version(release_json: &GithubRelease, current_version: &s
     })
 }
 
-pub fn parse_github_release(json: &str) -> Result<GithubRelease, Box<dyn std::error::Error>> {
-    serde_json::from_str(json).map_err(|e| e.into())
-}
-
-pub fn check_for_updates() -> Result<UpdateInfo, Box<dyn std::error::Error>> {
-    let client = reqwest::blocking::Client::builder()
-        .user_agent("PauseCat-Updater-v1")
-        .timeout(std::time::Duration::from_secs(10))
-        .build()?;
-
-    let response = client.get(GITHUB_API_URL)
-        .header("Accept", "application/vnd.github+json")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .send()?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        if status == reqwest::StatusCode::FORBIDDEN {
-            return Err("GitHub API Forbidden. The repository might be private or rate-limited.".into());
-        }
-        return Err(format!("GitHub API error: {}", status).into());
-    }
-
-    let release: GithubRelease = response.json()?;
-    parse_and_check_version(&release, APP_VERSION)
-}
-
-pub fn find_msi_asset(release: &GithubRelease) -> Option<&GithubAsset> {
-    release.assets.iter()
-        .find(|a| a.name.to_lowercase().ends_with(".msi"))
-}
-
 pub fn download_and_install(event_tx: Sender<AppEvent>) -> Result<(), Box<dyn std::error::Error>> {
-    let client = reqwest::blocking::Client::builder()
-        .user_agent("PauseCat-Updater-v1")
-        .build()?;
-
-    let release: GithubRelease = client.get(GITHUB_API_URL).send()?.json()?;
-    let asset = find_msi_asset(&release)
-        .ok_or("No MSI installer found in the latest release")?;
+    let data = winhttp_get(GITHUB_API_URL)?;
+    let release: GithubRelease = serde_json::from_slice(&data)?;
+    let asset = release.assets.iter().find(|a| a.name.to_lowercase().ends_with(".msi")).ok_or("No MSI installer found")?;
 
     let mut update_dir = Settings::get_config_dir();
     update_dir.push("Updates");
-    
-    // Purge old updates
     if update_dir.exists() { let _ = fs::remove_dir_all(&update_dir); }
     fs::create_dir_all(&update_dir)?;
+    let dest_path = update_dir.join(&asset.name);
 
-    let mut dest_path = update_dir.clone();
-    dest_path.push(&asset.name);
+    download_file_with_progress(&asset.browser_download_url, &dest_path, event_tx)?;
 
-    let mut response = client.get(&asset.browser_download_url).send()?;
-    let total_size = asset.size;
-    let mut downloaded = 0u64;
-    let mut buffer = [0; 8192];
-    let mut file = fs::File::create(&dest_path)?;
-
-    use std::io::Read;
-    loop {
-        let n = response.read(&mut buffer)?;
-        if n == 0 { break; }
-        std::io::Write::write_all(&mut file, &buffer[..n])?;
-        downloaded += n as u64;
-        if total_size > 0 {
-            let percentage = (downloaded as f64 / total_size as f64 * 100.0) as u32;
-            let _ = event_tx.send(AppEvent::UpdateProgress(percentage));
-        }
-    }
-    let _ = event_tx.send(AppEvent::UpdateProgress(100));
-
-    // PRO AUTO-RELAUNCH LOGIC:
-    // We launch a detached CMD.EXE that:
-    // 1. Starts the MSI installer (/i /passive)
-    // 2. Waits for msiexec to finish
-    // 3. Immediately restarts PauseCat from the installation directory
     unsafe {
         let exe_path = std::env::current_exe().unwrap_or_default();
-        let exe_path_str = exe_path.to_str().unwrap_or_default();
-        let msi_path_str = dest_path.to_str().unwrap_or_default();
-
-        let operation = HSTRING::from("open");
-        let file = HSTRING::from("cmd.exe");
-        
-        // Command Chain: 
-        // start /wait msiexec -> delay 2s for file release -> start PauseCat
-        let command = format!(
-            "/c start /wait msiexec.exe /i \"{}\" /passive /norestart && timeout /t 2 /nobreak && start \"\" \"{}\"",
-            msi_path_str,
-            exe_path_str
-        );
-        let parameters = HSTRING::from(command);
-        
-        ShellExecuteW(
-            None,
-            windows::core::PCWSTR(operation.as_ptr()),
-            windows::core::PCWSTR(file.as_ptr()),
-            windows::core::PCWSTR(parameters.as_ptr()),
-            None,
-            SW_HIDE, // Hide the black console window
-        );
+        let cmd = format!("/c start /wait msiexec.exe /i \"{}\" /passive /norestart && timeout /t 2 /nobreak && start \"\" \"{}\"", dest_path.to_str().unwrap_or_default(), exe_path.to_str().unwrap_or_default());
+        ShellExecuteW(None, windows::core::w!("open"), windows::core::w!("cmd.exe"), windows::core::PCWSTR(HSTRING::from(cmd).as_ptr()), None, SW_HIDE);
     }
-
-    #[cfg(not(test))]
     std::process::exit(0);
-    #[cfg(test)]
-    Ok(())
+}
+
+fn download_file_with_progress(url: &str, dest_path: &std::path::Path, event_tx: Sender<AppEvent>) -> Result<(), Box<dyn std::error::Error>> {
+    unsafe {
+        let h_session = WinHttpHandle(WinHttpOpen(windows::core::w!("PauseCat-Updater/1.0"), WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, None, None, 0));
+        if h_session.0.is_null() { return Err(format!("WinHttpOpen failed: {:?}", windows::core::Error::from_thread()).into()); }
+
+        let mut url_components = URL_COMPONENTS { dwStructSize: std::mem::size_of::<URL_COMPONENTS>() as u32, dwHostNameLength: u32::MAX, dwUrlPathLength: u32::MAX, ..Default::default() };
+        let url_u16: Vec<u16> = url.encode_utf16().chain(std::iter::once(0)).collect();
+        WinHttpCrackUrl(&url_u16, 0, &mut url_components)?;
+
+        let host_name_u16: Vec<u16> = std::slice::from_raw_parts(url_components.lpszHostName.0, url_components.dwHostNameLength as usize)
+            .iter().copied().chain(std::iter::once(0)).collect();
+        let path_name_u16: Vec<u16> = std::slice::from_raw_parts(url_components.lpszUrlPath.0, url_components.dwUrlPathLength as usize)
+            .iter().copied().chain(std::iter::once(0)).collect();
+
+        let h_connect = WinHttpHandle(WinHttpConnect(h_session.0, PCWSTR(host_name_u16.as_ptr()), url_components.nPort, 0));
+        if h_connect.0.is_null() { return Err(format!("WinHttpConnect failed: {:?}", windows::core::Error::from_thread()).into()); }
+
+        let h_request = WinHttpHandle(WinHttpOpenRequest(h_connect.0, windows::core::w!("GET"), PCWSTR(path_name_u16.as_ptr()), None, None, std::ptr::null(), if url.starts_with("https") { WINHTTP_FLAG_SECURE } else { WINHTTP_OPEN_REQUEST_FLAGS(0) }));
+        if h_request.0.is_null() { return Err(format!("WinHttpOpenRequest failed: {:?}", windows::core::Error::from_thread()).into()); }
+
+        WinHttpSendRequest(h_request.0, None, None, 0, 0, 0)?;
+        WinHttpReceiveResponse(h_request.0, std::ptr::null_mut())?;
+        let mut status_code: u32 = 0;
+        let mut dw_size = std::mem::size_of::<u32>() as u32;
+        WinHttpQueryHeaders(h_request.0, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, None, Some(&mut status_code as *mut _ as *mut _), &mut dw_size, std::ptr::null_mut())?;
+        
+        if status_code == 301 || status_code == 302 || status_code == 307 || status_code == 308 {
+             let mut redirect_url = [0u16; 4096]; let mut dw_size = 8192u32;
+             WinHttpQueryHeaders(h_request.0, WINHTTP_QUERY_LOCATION, None, Some(redirect_url.as_mut_ptr() as *mut _), &mut dw_size, std::ptr::null_mut())?;
+             let new_url = String::from_utf16_lossy(&redirect_url[.. (dw_size as usize / 2)]).trim_matches('\0').to_string();
+             return download_file_with_progress(&new_url, dest_path, event_tx);
+        }
+
+        if status_code != 200 { return Err(format!("HTTP Error: {}", status_code).into()); }
+        let mut content_length: u64 = 0; let mut dw_size = std::mem::size_of::<u64>() as u32;
+        let _ = WinHttpQueryHeaders(h_request.0, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER64, None, Some(&mut content_length as *mut _ as *mut _), &mut dw_size, std::ptr::null_mut());
+        let mut file = fs::File::create(dest_path)?;
+        let mut downloaded = 0u64; let mut dw_size: u32 = 0;
+        loop {
+            WinHttpQueryDataAvailable(h_request.0, &mut dw_size as *mut _)?;
+            if dw_size == 0 { break; }
+            let mut buffer = vec![0u8; dw_size as usize];
+            let mut dw_read: u32 = 0;
+            WinHttpReadData(h_request.0, buffer.as_mut_ptr() as *mut _, dw_size, &mut dw_read)?;
+            std::io::Write::write_all(&mut file, &buffer[..dw_read as usize])?;
+            downloaded += dw_read as u64;
+            if content_length > 0 { let _ = event_tx.send(AppEvent::UpdateProgress((downloaded as f64 / content_length as f64 * 100.0) as u32)); }
+        }
+        Ok(())
+    }
 }
 
 pub fn cleanup_updates() {
     let mut update_dir = Settings::get_config_dir();
     update_dir.push("Updates");
-    if update_dir.exists() {
-        let _ = fs::remove_dir_all(&update_dir);
-    }
+    if update_dir.exists() { let _ = fs::remove_dir_all(&update_dir); }
 }
 
 pub fn ensure_assets_sync(event_tx: Sender<AppEvent>) {
     thread::spawn(move || {
-        log::info!("Starting asset sync check...");
-        
-        // 1. Determine the target path for the download (Config Dir)
         let mut config_asset_path = Settings::get_config_dir();
         config_asset_path.push("assets");
-        if !config_asset_path.exists() {
-            let _ = fs::create_dir_all(&config_asset_path);
-        }
+        if !config_asset_path.exists() { let _ = fs::create_dir_all(&config_asset_path); }
         config_asset_path.push("default.webm");
-
-        // 2. Check if asset already exists and is valid
-        if config_asset_path.exists() && config_asset_path.metadata().map(|m| m.len() > 1000).unwrap_or(false) {
-            log::info!("Asset already exists and is valid: {:?}", config_asset_path);
-            return;
-        }
-
-        log::info!("Asset missing or invalid, starting background fetch...");
-
-        let client = match reqwest::blocking::Client::builder()
-            .user_agent("PauseCat-Asset-Syncer-v1")
-            .timeout(std::time::Duration::from_secs(60))
-            .build() {
-                Ok(c) => c,
-                Err(e) => {
-                    log::error!("Failed to create HTTP client: {}", e);
-                    let _ = event_tx.send(AppEvent::AssetDownloadError(format!("Client error: {}", e)));
-                    return;
+        if config_asset_path.exists() && config_asset_path.metadata().map(|m| m.len() > 1000).unwrap_or(false) { return; }
+        if let Ok(data) = winhttp_get(GITHUB_API_URL) {
+            if let Ok(release) = serde_json::from_slice::<GithubRelease>(&data) {
+                if let Some(asset) = release.assets.iter().find(|a| a.name == "default.webm") {
+                    let _ = download_file_with_progress(&asset.browser_download_url, &config_asset_path, event_tx.clone());
+                    let _ = event_tx.send(AppEvent::AssetDownloaded("default.webm".to_string()));
+                    crate::app::wakeup_main_thread();
                 }
-            };
-
-        // Retry loop for GitHub API
-        let mut release: Option<GithubRelease> = None;
-        for attempt in 1..=3 {
-            log::info!("Fetching latest release info (attempt {}/3)...", attempt);
-            match client.get(GITHUB_API_URL)
-                .header("Accept", "application/vnd.github+json")
-                .header("X-GitHub-Api-Version", "2022-11-28")
-                .send()
-                .and_then(|r| r.json::<GithubRelease>()) {
-                    Ok(r) => {
-                        release = Some(r);
-                        break;
-                    }
-                    Err(e) => {
-                        log::error!("Attempt {} failed: {}", attempt, e);
-                        if attempt < 3 { thread::sleep(std::time::Duration::from_secs(5)); }
-                        else {
-                            let _ = event_tx.send(AppEvent::AssetDownloadError(format!("GitHub API error: {}", e)));
-                            return;
-                        }
-                    }
-                }
-        }
-
-        let release = release.unwrap();
-        let asset = match release.assets.iter().find(|a| a.name == "default.webm") {
-            Some(a) => a,
-            None => {
-                log::warn!("default.webm not found in latest release assets");
-                let _ = event_tx.send(AppEvent::AssetDownloadError("Asset not found in latest release".to_string()));
-                return;
-            }
-        };
-
-        log::info!("Downloading default.webm ({} bytes) from {}", asset.size, asset.browser_download_url);
-        // Initial progress update to trigger UI state
-        let _ = event_tx.send(AppEvent::AssetDownloadProgress(0));
-
-        match client.get(&asset.browser_download_url).send() {
-            Ok(mut response) => {
-                let total_size = response.content_length().unwrap_or(asset.size as u64);
-                match fs::File::create(&config_asset_path) {
-                    Ok(mut file) => {
-                        let mut buffer = [0; 16384];
-                        let mut downloaded = 0;
-                        let mut last_update = std::time::Instant::now();
-                        
-                        loop {
-                            match response.read(&mut buffer) {
-                                Ok(0) => break,
-                                Ok(n) => {
-                                    if let Err(e) = std::io::Write::write_all(&mut file, &buffer[..n]) {
-                                        log::error!("Failed to write to file: {}", e);
-                                        let _ = event_tx.send(AppEvent::AssetDownloadError(format!("IO error: {}", e)));
-                                        return;
-                                    }
-                                    downloaded += n;
-                                    
-                                    if last_update.elapsed().as_millis() > 200 {
-                                        let percentage = (downloaded as f32 / total_size as f32 * 100.0) as u32;
-                                        let _ = event_tx.send(AppEvent::AssetDownloadProgress(percentage.min(99)));
-                                        last_update = std::time::Instant::now();
-                                    }
-                                }
-                                Err(e) => {
-                                    log::error!("Failed to read response: {}", e);
-                                    let _ = event_tx.send(AppEvent::AssetDownloadError(format!("Download interrupted: {}", e)));
-                                    return;
-                                }
-                            }
-                        }
-                        log::info!("Successfully downloaded {} bytes to {:?}", downloaded, config_asset_path);
-                        let _ = event_tx.send(AppEvent::AssetDownloadProgress(100));
-                        let _ = event_tx.send(AppEvent::AssetDownloaded("default.webm".to_string()));
-                    }
-                    Err(e) => {
-                        log::error!("Failed to create file: {}", e);
-                        let _ = event_tx.send(AppEvent::AssetDownloadError(format!("File creation error: {}", e)));
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("Failed to start download: {}", e);
-                let _ = event_tx.send(AppEvent::AssetDownloadError(format!("Download start error: {}", e)));
             }
         }
     });
-}
-
-#[cfg(test)]
-mod internal_tests {
-    use super::*;
-
-    #[test]
-    fn test_github_release_parsing_logic() {
-        let json = r#"{
-            "tag_name": "v1.2.0",
-            "body": "New version",
-            "assets": [
-                {"name": "pausecat.msi", "browser_download_url": "http://test.com/msi", "size": 1000},
-                {"name": "readme.txt", "browser_download_url": "http://test.com/txt", "size": 500}
-            ]
-        }"#;
-        
-        let release = parse_github_release(json).unwrap();
-        assert_eq!(release.tag_name, "v1.2.0");
-        assert_eq!(release.assets.len(), 2);
-        
-        let info = parse_and_check_version(&release, "1.1.0").unwrap();
-        assert!(info.available);
-        assert_eq!(info.latest_version, "v1.2.0");
-        
-        let msi = find_msi_asset(&release).unwrap();
-        assert_eq!(msi.name, "pausecat.msi");
-    }
-
-    #[test]
-    fn test_no_update_available_logic() {
-        let release = GithubRelease {
-            tag_name: "v1.0.0".to_string(),
-            body: "No changes".to_string(),
-            assets: vec![],
-        };
-        let info = parse_and_check_version(&release, "1.0.0").unwrap();
-        assert!(!info.available);
-    }
-
-    #[test]
-    fn test_cleanup_updates_smoke() {
-        cleanup_updates();
-    }
 }

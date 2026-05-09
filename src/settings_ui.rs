@@ -1,12 +1,11 @@
 use std::sync::mpsc::Sender;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use windows::core::*;
 use windows::Win32::Foundation::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::Com::*;
-use windows::Win32::System::Com::StructuredStorage::*;
 use windows::Win32::System::LibraryLoader::*;
 use windows::Win32::UI::Controls::Dialogs::*;
 use webview2_com::*;
@@ -14,13 +13,16 @@ use webview2_com::Microsoft::Web::WebView2::Win32::*;
 use crate::events::AppEvent;
 use crate::settings::Settings;
 use crate::overlay::webview_env;
+use crate::app::wakeup_main_thread;
 
 struct ComSafe<T>(T);
 unsafe impl<T> Send for ComSafe<T> {}
 unsafe impl<T> Sync for ComSafe<T> {}
 
-lazy_static::lazy_static! {
-    static ref CONTROLLERS: Mutex<HashMap<isize, ComSafe<ICoreWebView2Controller>>> = Mutex::new(HashMap::new());
+static SETTINGS_CONTROLLERS: OnceLock<Mutex<HashMap<isize, ComSafe<ICoreWebView2Controller>>>> = OnceLock::new();
+
+fn get_controllers() -> &'static Mutex<HashMap<isize, ComSafe<ICoreWebView2Controller>>> {
+    SETTINGS_CONTROLLERS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 pub struct SettingsWindow {
@@ -34,24 +36,29 @@ where F: FnOnce(&str), P: FnOnce() -> Option<String> {
             if let Ok(new_settings) = serde_json::from_value::<Settings>(data["settings"].clone()) {
                 let _ = sender.send(AppEvent::ConfigChanged(new_settings));
                 let _ = sender.send(AppEvent::SettingsClosed); 
+                wakeup_main_thread();
             }
         }
     } else if json.contains("\"action\":\"close\"") {
         let _ = sender.send(AppEvent::SettingsClosed);
+        wakeup_main_thread();
     } else if json.contains("\"action\":\"get_apps\"") {
         let apps = crate::system::get_running_apps();
         let apps_json = serde_json::to_string(&apps).unwrap_or_default();
         post_message(&format!("{{\"action\":\"apps_list\", \"apps\": {}}}", apps_json));
     } else if json.contains("\"action\":\"check_updates\"") {
         let _ = sender.send(AppEvent::CheckForUpdates);
+        wakeup_main_thread();
     } else if json.contains("\"action\":\"start_update\"") {
         let _ = sender.send(AppEvent::StartUpdate);
+        wakeup_main_thread();
     } else if json.contains("\"action\":\"select_media\"") {
         if let Some(path) = pick_file_fn() {
             post_message(&format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path.replace('\\', "/")));
         }
     } else if json.contains("\"action\":\"retry_sync\"") {
         let _ = sender.send(AppEvent::RetryAssetSync);
+        wakeup_main_thread();
     }
 }
 
@@ -79,7 +86,9 @@ pub fn on_controller_completed(
     let mut rect = RECT::default();
     unsafe { let _ = GetClientRect(hwnd, &mut rect); }
     let _ = unsafe { controller.SetBounds(rect) };
-    CONTROLLERS.lock().unwrap().insert(hwnd.0 as isize, ComSafe(controller));
+    if let Ok(mut lock) = get_controllers().lock() {
+        lock.insert(hwnd.0 as isize, ComSafe(controller));
+    }
     Ok(())
 }
 
@@ -88,16 +97,16 @@ impl SettingsWindow {
         unsafe {
             let instance: HINSTANCE = GetModuleHandleW(None)?.into();
             let class_name = w!("PauseCatSettingsClass");
-            let wnd_class = WNDCLASSEXW {
+            let mut wnd_class = WNDCLASSEXW {
                 cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
                 lpfnWndProc: Some(settings_wnd_proc),
                 hInstance: instance,
                 lpszClassName: class_name,
                 hCursor: LoadCursorW(None, IDC_ARROW)?,
-                hbrBackground: HBRUSH(GetStockObject(WHITE_BRUSH).0),
+                hbrBackground: HBRUSH(GetStockObject(WHITE_BRUSH).0 as *mut _),
                 ..Default::default()
             };
-            RegisterClassExW(&wnd_class);
+            RegisterClassExW(&mut wnd_class);
             let hwnd = CreateWindowExW(
                 WINDOW_EX_STYLE::default(), class_name, w!("PauseCat Settings"),
                 WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
@@ -122,11 +131,15 @@ impl SettingsWindow {
                 &CreateCoreWebView2ControllerCompletedHandler::create(
                     Box::new(move |result, controller| {
                         on_controller_completed(result, controller, hwnd)?;
-                        if let Ok(lock) = CONTROLLERS.lock() {
+                        if let Ok(lock) = get_controllers().lock() {
                             if let Some(safe_controller) = lock.get(&(hwnd.0 as isize)) {
                                 let webview = safe_controller.0.CoreWebView2()?;
                                 let ws = webview.Settings()?;
-                                let _ = (ws.SetIsWebMessageEnabled(true), ws.SetAreDefaultContextMenusEnabled(false), ws.SetAreDevToolsEnabled(false), ws.SetIsZoomControlEnabled(false), ws.SetIsStatusBarEnabled(false));
+                                let _ = ws.SetIsWebMessageEnabled(true);
+                                let _ = ws.SetAreDefaultContextMenusEnabled(false);
+                                let _ = ws.SetAreDevToolsEnabled(false);
+                                let _ = ws.SetIsZoomControlEnabled(false);
+                                let _ = ws.SetIsStatusBarEnabled(false);
                                 
                                 let assets_path = webview_env::get_assets_path();
                                 let env_res = env_inner.clone();
@@ -137,9 +150,7 @@ impl SettingsWindow {
                                         let mut uri_ptr = PWSTR::null();
                                         let _ = request.Uri(&mut uri_ptr);
                                         let uri = uri_ptr.to_string().unwrap_or_default();
-                                        if let Some((content, mime)) = crate::overlay::webview::handle_resource_request(&uri, &assets_path) {
-                                            let stream = CreateStreamOnHGlobal(HGLOBAL(std::ptr::null_mut()), true)?;
-                                            let _ = (stream.Write(content.as_ptr() as *const _, content.len() as u32, None), stream.Seek(0, STREAM_SEEK_SET, None));
+                                        if let Some((stream, mime)) = crate::overlay::webview::handle_resource_stream_request(&uri, &assets_path) {
                                             let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(format!("Content-Type: {}\r\n", mime)))?;
                                             let _ = args.SetResponse(&response);
                                         }
@@ -199,7 +210,7 @@ impl SettingsWindow {
     }
 
     pub fn post_web_message(&self, msg: &str) {
-        if let Ok(lock) = CONTROLLERS.lock() {
+        if let Ok(lock) = get_controllers().lock() {
             if let Some(safe_controller) = lock.get(&(self.hwnd.0 as isize)) {
                 if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {
                     let _ = unsafe { webview.PostWebMessageAsJson(&HSTRING::from(msg)) };
@@ -233,10 +244,11 @@ impl Drop for SettingsWindow { fn drop(&mut self) { unsafe { let _ = DestroyWind
 unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     match msg {
         WM_SIZE => {
-            if let Ok(lock) = CONTROLLERS.lock() {
+            if let Ok(lock) = get_controllers().lock() {
                 if let Some(safe_controller) = lock.get(&(hwnd.0 as isize)) {
                     let mut rect = RECT::default();
-                    let _ = (GetClientRect(hwnd, &mut rect), safe_controller.0.SetBounds(rect));
+                    let _ = GetClientRect(hwnd, &mut rect);
+                    let _ = safe_controller.0.SetBounds(rect);
                 }
             }
             LRESULT(0)
@@ -246,6 +258,7 @@ unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM
             if !sender_handle.is_invalid() {
                 let sender = unsafe { &*(sender_handle.0 as *const Sender<AppEvent>) };
                 let _ = sender.send(AppEvent::SettingsClosed);
+                wakeup_main_thread();
             }
             LRESULT(0)
         }
@@ -253,7 +266,7 @@ unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM
             let sender_handle = RemovePropW(hwnd, w!("Sender")).unwrap_or_default();
             if !sender_handle.is_invalid() { drop(unsafe { Box::from_raw(sender_handle.0 as *mut Sender<AppEvent>) }); }
             let _ = RemovePropW(hwnd, w!("Settings")).map(|h| if !h.is_invalid() { drop(unsafe { Box::from_raw(h.0 as *mut Settings) }); });
-            if let Ok(mut lock) = CONTROLLERS.lock() { lock.remove(&(hwnd.0 as isize)); }
+            if let Ok(mut lock) = get_controllers().lock() { lock.remove(&(hwnd.0 as isize)); }
             LRESULT(0)
         }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
