@@ -38,6 +38,20 @@ pub struct Settings {
     pub bubble_pos_x: i32,
     pub bubble_pos_y: i32,
     pub animation_style: String,
+    pub break_style: String, // "media" or "text"
+    pub custom_text: String,
+    pub video_volume: f32, // 0.0 to 1.0
+    pub text_animation: String,
+    pub text_rotation_x: i32,
+    pub text_rotation_y: i32,
+    pub text_rotation_z: i32,
+    pub text_color: String,
+    pub text_opacity: f32,
+    pub text_glow: f32,
+    pub text_glow_enabled: bool,
+    pub text_glow_color: String,
+    pub text_depth: i32,
+    pub adaptive_text_color: bool,
 }
 
 impl Default for Settings {
@@ -50,18 +64,32 @@ impl Default for Settings {
             overlay_animation: "default.webm".to_string(),
             whitelist: Vec::new(),
             break_messages: vec![
-                "Breathe In...".to_string(),
-                "Take a stretch".to_string(),
-                "Rest your eyes".to_string(),
-                "Hydrate yourself".to_string()
+                "Take a deep breath".to_string(),
+                "Stretch your body".to_string(),
+                "Rest your eyes for a moment".to_string(),
+                "Time for a quick water break".to_string()
             ],
-            randomize_messages: false,
+            randomize_messages: true,
             show_work_duration_status: true,
             bubble_opacity: 0.1,
             bubble_size: 580,
             bubble_pos_x: 5,
             bubble_pos_y: 5,
             animation_style: "float".to_string(),
+            break_style: "text".to_string(),
+            custom_text: "PAUSE".to_string(),
+            video_volume: 0.0,
+            text_animation: "float".to_string(),
+            text_rotation_x: 20,
+            text_rotation_y: -20,
+            text_rotation_z: 0,
+            text_color: "#ffffff".to_string(),
+            text_opacity: 0.15,
+            text_glow: 10.0,
+            text_glow_enabled: true,
+            text_glow_color: "#ffffff".to_string(),
+            text_depth: 5,
+            adaptive_text_color: true,
         }
     }
 }

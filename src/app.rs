@@ -60,6 +60,7 @@ impl App {
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
 
         crate::updater::cleanup_updates();
+        crate::updater::ensure_assets_sync(self.event_tx.clone());
 
         let settings_clone = self.settings.clone();
         let event_tx_clone = self.event_tx.clone();
@@ -157,6 +158,27 @@ impl App {
                 if let Some(ref mut win) = self.settings_window {
                     win.send_update_error(err);
                 }
+            }
+            AppEvent::AssetDownloaded(name) => {
+                log::info!("Asset downloaded: {}", name);
+                if let Some(ref mut win) = self.settings_window {
+                    win.post_web_message("{\"action\":\"asset_synced\"}");
+                }
+            }
+            AppEvent::AssetDownloadProgress(percentage) => {
+                if let Some(ref mut win) = self.settings_window {
+                    win.post_web_message(&format!("{{\"action\":\"asset_progress\", \"percentage\": {}}}", percentage));
+                }
+            }
+            AppEvent::AssetDownloadError(err) => {
+                log::error!("Asset download error: {}", err);
+                if let Some(ref mut win) = self.settings_window {
+                    win.post_web_message(&format!("{{\"action\":\"asset_error\", \"error\": \"{}\"}}", err.replace('"', "\\\"")));
+                }
+            }
+            AppEvent::RetryAssetSync => {
+                log::info!("Retrying asset sync...");
+                crate::updater::ensure_assets_sync(self.event_tx.clone());
             }
             AppEvent::ThemeChanged(is_dark) => {
                 self.is_dark_mode = is_dark;

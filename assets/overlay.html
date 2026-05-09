@@ -143,12 +143,68 @@
         }
 
         .hidden { display: none !important; }
+
+        /* 3D Text Fallback */
+        .fallback-text-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: -1;
+            perspective: 1000px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+        }
+
+        .fallback-text-3d {
+            font-size: 15vw;
+            font-weight: 900;
+            color: var(--text-color, #fff);
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg));
+            
+            /* High-Fidelity Shadow / Extrusion / Glow */
+            text-shadow: var(--text-3d-shadow);
+            filter: var(--text-glow-filter, none);
+            
+            opacity: var(--text-opacity, 0.15);
+            user-select: none;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        @keyframes textFloat {
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) translateZ(0); }
+            50% { transform: rotateX(calc(var(--rot-x, 20deg) + 5deg)) rotateY(calc(var(--rot-y, -20deg) + 5deg)) rotateZ(var(--rot-z, 0deg)) translateZ(50px); }
+        }
+
+        @keyframes textRotate {
+            0% { transform: rotateX(var(--rot-x, 20deg)) rotateY(0deg) rotateZ(var(--rot-z, 0deg)); }
+            100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(360deg) rotateZ(var(--rot-z, 0deg)); }
+        }
+
+        @keyframes textSwing {
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(-40deg) rotateZ(var(--rot-z, 0deg)); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(40deg) rotateZ(var(--rot-z, 0deg)); }
+        }
+
+        @keyframes textPulse {
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) scale(1); opacity: var(--text-opacity, 0.15); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) scale(1.1); opacity: calc(var(--text-opacity, 0.15) + 0.1); }
+        }
     </style>
 </head>
 <body>
     <div id="bg-media-container">
+        <div id="fallback-ui" class="fallback-text-container hidden">
+            <div class="fallback-text-3d">PAUSE</div>
+        </div>
         <img id="bg-image" class="hidden">
-        <video id="bg-video" class="hidden" autoplay loop muted playsinline></video>
+        <video id="bg-video" class="hidden" autoplay loop playsinline></video>
     </div>
 
     <div id="bubble-el" class="floating-bubble">
@@ -200,6 +256,32 @@
             }, 500);
         }
 
+        function generate3DShadow(color, depth) {
+            let shadows = [];
+            for (let i = 1; i <= depth; i++) {
+                // Heavier extrusion with gradual darkening
+                let shadowColor = adjustColor(color, -i * 6);
+                shadows.push(`${i}px ${i}px 0px ${shadowColor}`);
+            }
+            shadows.push(`0 ${depth + 1}px 15px rgba(0,0,0,0.5)`);
+            shadows.push(`0 ${depth + 8}px 30px rgba(0,0,0,0.3)`);
+            return shadows.join(', ');
+        }
+
+        function adjustColor(hex, amount) {
+            if (hex === 'transparent' || hex === 'none') return hex;
+            let usePound = false;
+            if (hex[0] == "#") { hex = hex.slice(1); usePound = true; }
+            let num = parseInt(hex, 16);
+            let r = (num >> 16) + amount;
+            if (r > 255) r = 255; else if (r < 0) r = 0;
+            let b = ((num >> 8) & 0x00FF) + amount;
+            if (b > 255) b = 255; else if (b < 0) b = 0;
+            let g = (num & 0x0000FF) + amount;
+            if (g > 255) g = 255; else if (g < 0) g = 0;
+            return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
+        }
+
         window.chrome.webview.addEventListener('message', event => {
             if (event.data.action === "init") {
                 seconds = event.data.duration;
@@ -219,12 +301,61 @@
                 root.style.setProperty('--bubble-size', event.data.bubbleSize + 'px');
                 root.style.setProperty('--glass-bg', `rgba(${event.data.isDark ? '0,0,0' : '255,255,255'}, ${event.data.bubbleOpacity})`);
                 
-                // Smart Position: Account for bubble size so it doesn't clip off edge at 100%
+                // Smart Position
                 bubble.style.left = `calc(${event.data.bubblePosX}% - ${event.data.bubbleSize * (event.data.bubblePosX/100)}px)`;
                 bubble.style.top = `calc(${event.data.bubblePosY}% - ${event.data.bubbleSize * (event.data.bubblePosY/100)}px)`;
                 
                 if (event.data.animationStyle !== 'none') {
                     bubble.style.animation = `${event.data.animationStyle} 6s ease-in-out infinite`;
+                }
+
+                // Custom 3D Text Logic
+                const fallback = document.getElementById('fallback-ui');
+                const fallbackText = fallback.querySelector('.fallback-text-3d');
+                if (event.data.customText) {
+                    fallbackText.innerText = event.data.customText;
+                }
+
+                // Adaptive Color Logic
+                let finalColor = event.data.textColor || '#ffffff';
+                if (event.data.adaptiveTextColor) {
+                    finalColor = event.data.isDark ? '#ffffff' : '#000000';
+                }
+
+                // Apply advanced text styles
+                root.style.setProperty('--text-color', finalColor);
+                root.style.setProperty('--text-opacity', event.data.textOpacity ?? 0.15);
+                root.style.setProperty('--rot-x', (event.data.textRotationX ?? 20) + 'deg');
+                root.style.setProperty('--rot-y', (event.data.textRotationY ?? -20) + 'deg');
+                root.style.setProperty('--rot-z', (event.data.textRotationZ ?? 0) + 'deg');
+                
+                // Glow Logic
+                if (event.data.textGlowEnabled) {
+                    const glowColor = event.data.textGlowColor || finalColor;
+                    root.style.setProperty('--text-glow-filter', `drop-shadow(0 0 ${(event.data.textGlow ?? 10)}px ${glowColor})`);
+                } else {
+                    root.style.setProperty('--text-glow-filter', 'none');
+                }
+
+                root.style.setProperty('--text-3d-shadow', generate3DShadow(finalColor, event.data.textDepth ?? 5));
+
+                const textAnim = event.data.textAnimation || 'float';
+                if (textAnim === 'float') {
+                    fallbackText.style.animation = 'textFloat 8s ease-in-out infinite';
+                } else if (textAnim === 'rotate') {
+                    fallbackText.style.animation = 'textRotate 10s linear infinite';
+                } else if (textAnim === 'swing') {
+                    fallbackText.style.animation = 'textSwing 6s ease-in-out infinite';
+                } else if (textAnim === 'pulse') {
+                    fallbackText.style.animation = 'textPulse 4s ease-in-out infinite';
+                } else {
+                    fallbackText.style.animation = 'none';
+                }
+
+                if (event.data.breakStyle === 'text') {
+                    fallback.classList.remove('hidden');
+                } else {
+                    fallback.classList.add('hidden');
                 }
 
                 // Break Messages
@@ -236,7 +367,7 @@
                     }
                 }
 
-                // Work Duration Status (Smart Formatting)
+                // Work Duration Status
                 if (event.data.showWorkStatus) {
                     const workStatusEl = document.getElementById('work-status-text');
                     workStatusEl.classList.remove('hidden');
@@ -253,14 +384,29 @@
                     }
                 }
                 
-                if (event.data.mediaPath) {
+                if (event.data.mediaPath && event.data.breakStyle !== 'text') {
                     const img = document.getElementById('bg-image');
                     const video = document.getElementById('bg-video');
+                    const fallback = document.getElementById('fallback-ui');
                     const ext = event.data.mediaPath.split('.').pop().toLowerCase();
+
+                    video.onerror = () => {
+                        console.warn("Video load failed, showing fallback UI");
+                        video.classList.add('hidden');
+                        fallback.classList.remove('hidden');
+                    };
+
+                    // Set Volume
+                    video.volume = event.data.videoVolume ?? 0.0;
+
                     if (['mp4', 'webm', 'ogg'].includes(ext)) {
                         video.src = event.data.mediaPath;
                         video.classList.remove('hidden');
-                        video.play().catch(e => console.error(e));
+                        video.play().catch(e => {
+                            console.error(e);
+                            video.classList.add('hidden');
+                            fallback.classList.remove('hidden');
+                        });
                     } else {
                         img.src = event.data.mediaPath;
                         img.classList.remove('hidden');

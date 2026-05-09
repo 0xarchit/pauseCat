@@ -26,7 +26,6 @@
             <File Id="AssetManifest" Source="assets\app.manifest" />
             <File Id="AssetOverlay" Source="assets\overlay.html" />
             <File Id="AssetSettings" Source="assets\settings.html" />
-            <File Id="AssetDefaultVideo" Source="assets\default.webm" />
             <File Id="AssetIcon" Source="assets\pauseCat.ico" />
             <File Id="AssetLicense" Source="assets\LICENSE.rtf" />
           </Component>

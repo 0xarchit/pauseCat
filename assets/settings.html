@@ -16,13 +16,6 @@
             --ring: #f4ebff;
             --card-bg: #ffffff;
             --header-bg: #ffffff;
-            --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-            --update-bg: #ecfdf3;
-            --update-text: #027a48;
-            --update-border: #abfdfd;
-            --danger-bg: #fef2f2;
-            --danger-text: #b91c1c;
-            --danger-border: #fecaca;
         }
 
         body.dark {
@@ -36,64 +29,165 @@
             --ring: #2d1d5a;
             --card-bg: #1a1a1a;
             --header-bg: #121212;
-            --update-bg: #052e16;
-            --update-text: #6ee7b7;
-            --update-border: #064e3b;
-            --danger-bg: #450a0a;
-            --danger-text: #fca5a5;
-            --danger-border: #7f1d1d;
         }
 
-        html, body {
-            overflow: hidden;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-drag: none;
-        }
+        html, body { overflow: hidden; touch-action: none; user-select: none; }
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+            background-color: var(--bg-color); color: var(--text-main);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
         }
 
         .header {
-            padding: 16px 24px;
-            display: flex;
-            align-items: center; gap: 12px;
-            border-bottom: 1px solid var(--border);
-            background: var(--header-bg);
-            z-index: 10; flex-shrink: 0;
+            padding: 16px 24px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border); background: var(--header-bg); flex-shrink: 0;
         }
-
         .header h1 { font-size: 1.125rem; font-weight: 600; margin: 0; }
-        .header img { width: 28px; height: 28px; border-radius: 6px; object-fit: contain; }
+        .header img { width: 28px; height: 28px; border-radius: 6px; }
 
         .scroll-container {
             flex: 1; overflow-y: auto; padding: 20px 24px;
-            background: var(--secondary-bg);
-            scrollbar-width: none; -ms-overflow-style: none;
+            background: var(--secondary-bg); scrollbar-width: none;
         }
         .scroll-container::-webkit-scrollbar { display: none; }
 
         .section-title {
-            font-size: 0.7rem; font-weight: 600;
-            color: var(--text-secondary); text-transform: uppercase;
-            letter-spacing: 0.05em; margin-bottom: 10px; margin-top: 10px;
+            font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.05em; margin: 12px 0 8px 0;
         }
 
         .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px; padding: 16px;
-            margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px; margin-bottom: 24px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
+
+        .setting-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px; gap: 16px;
+        }
+        .setting-row:last-child { margin-bottom: 0; }
+
+        .setting-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+        .setting-label { font-size: 0.9rem; font-weight: 600; white-space: nowrap; }
+        .setting-description { font-size: 0.75rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; }
+
+        .setting-control { display: flex; align-items: center; justify-content: flex-end; min-width: 140px; gap: 8px; }
+
+        input[type="number"], input[type="text"], select {
+            padding: 8px 12px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 0.85rem; outline: none;
+            background: var(--card-bg); color: var(--text-main); transition: border-color 0.2s;
+        }
+        input[type="number"] { width: 70px; }
+        select { width: 130px; }
+        input[type="text"] { width: 100%; box-sizing: border-box; }
+        
+        input[type="range"] {
+            -webkit-appearance: none; width: 100px; height: 4px;
+            background: var(--border); border-radius: 2px; outline: none;
+            accent-color: var(--accent); cursor: pointer;
+        }
+
+        .preview-container {
+            width: 100%; aspect-ratio: 16 / 9; background: #000;
+            border-radius: 12px; position: relative; overflow: hidden;
+            margin-bottom: 12px; border: 1px solid var(--border); flex-shrink: 0;
+            perspective: 1000px;
+        }
+        .preview-bg { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; position: absolute; top:0; left:0; z-index: 0; }
+        
+        .preview-text-3d-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            pointer-events: none; z-index: 1;
+        }
+        .preview-text-3d {
+            font-size: 5vw; font-weight: 950; color: var(--text-color, #fff);
+            text-transform: uppercase; text-align: center; line-height: 1;
+            transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg));
+            text-shadow: var(--text-3d-shadow); opacity: var(--text-opacity, 0.2); 
+            animation: previewFloat 5s ease-in-out infinite;
+            filter: var(--text-glow-filter, none);
+        }
+        @keyframes previewFloat {
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg)) translateZ(0); }
+            50% { transform: rotateX(calc(var(--rot-x, 20deg) + 5deg)) rotateY(calc(var(--rot-y, -20deg) + 5deg)) rotateZ(var(--rot-z, 0deg)) translateZ(20px); }
+        }
+
+        .preview-bubble {
+            position: absolute; background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-weight: 700; pointer-events: none;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .status-footer {
+            margin-bottom: 24px; padding: 0 4px; display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .dot-ready { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .dot-missing { background: #eab308; box-shadow: 0 0 8px #eab308; }
+        .dot-error { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+        .asset-progress-container {
+            width: 80px; height: 4px; background: var(--border);
+            border-radius: 2px; overflow: hidden; margin-left: 8px;
+            display: inline-block; vertical-align: middle;
+        }
+        .asset-progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; }
+
+        .retry-btn {
+            background: none; border: 1px solid var(--accent); color: var(--accent);
+            padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;
+            margin-left: 8px;
+        }
+
+        .media-preview-area { margin-top: 12px; }
+        .media-preview {
+            width: 100%; height: 160px; border: 2px dashed var(--border);
+            border-radius: 12px; display: flex; justify-content: center; align-items: center;
+            background: var(--card-bg); cursor: pointer; overflow: hidden; position: relative;
+            transition: all 0.2s;
+        }
+        .media-preview:hover { border-color: var(--accent); background: var(--secondary-bg); }
+        .media-preview img, .media-preview video { width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0; }
+        .media-placeholder { display: flex; flex-direction: column; align-items: center; color: var(--text-secondary); font-size: 0.85rem; z-index: 1; }
+
+        .list-container { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag {
+            background: var(--ring); color: var(--accent); padding: 4px 10px;
+            border-radius: 12px; font-size: 0.75rem; font-weight: 600;
+            display: flex; align-items: center; gap: 6px; border: 1px solid var(--accent);
+        }
+        .tag span { cursor: pointer; font-size: 1rem; line-height: 1; }
+
+        .add-row { display: flex; gap: 8px; margin-top: 14px; }
+
+        .footer {
+            padding: 16px 24px; background: var(--header-bg); border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0;
+        }
+
+        button { padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-secondary { background: var(--bg-color); color: var(--text-main); border-color: var(--border); }
+        .btn-secondary:hover { background: var(--secondary-bg); }
+
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
 
         /* Modal / Popup Styles */
         .modal-overlay {
@@ -115,7 +209,6 @@
         .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; display: block; }
         .modal-desc { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5; display: block; }
 
-        /* Progress Bar for Update */
         .progress-container {
             width: 100%; height: 8px;
             background: var(--secondary-bg);
@@ -127,130 +220,35 @@
             width: 0%; transition: width 0.2s ease;
         }
 
-        .setting-row {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 16px; gap: 12px;
-        }
-        .setting-row:last-child { margin-bottom: 0; }
-
-        .setting-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-        .setting-label { font-size: 0.875rem; font-weight: 500; }
-        .setting-description { font-size: 0.75rem; color: var(--text-secondary); }
-
-        input[type="number"], input[type="text"], select {
-            padding: 6px 10px; border: 1px solid var(--border);
-            border-radius: 6px; font-size: 0.85rem; outline: none;
-            transition: all 0.2s; background: var(--card-bg);
-            color: var(--text-main); font-family: inherit;
-        }
-        input[type="number"] { width: 65px; }
-        select { width: 110px; }
-        input[type="range"] { width: 120px; accent-color: var(--accent); cursor: pointer; }
-        select option { background-color: var(--card-bg); color: var(--text-main); }
-        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
-
-        .preview-container {
-            width: 100%; height: 160px; background: #000;
-            border-radius: 10px; position: relative; overflow: hidden;
-            margin-bottom: 20px; border: 1px solid var(--border); flex-shrink: 0;
-        }
-        .preview-bg { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; }
-        .preview-bubble {
-            position: absolute; background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            color: white; font-weight: 700; pointer-events: none;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
-        }
-
-        .media-preview-area { position: relative; margin-top: 10px; }
-        .media-preview {
-            width: 100%; height: 140px; border: 2px dashed var(--border);
-            border-radius: 10px; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; background: var(--card-bg);
-            cursor: pointer; transition: all 0.2s; overflow: hidden;
-        }
-        .media-preview:hover { border-color: var(--accent); background: var(--secondary-bg); }
-        .media-preview img, .media-preview video { width: 100%; height: 100%; object-fit: cover; }
-        .media-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 0.8rem; }
-
-        .reset-media {
-            position: absolute; top: 6px; right: 6px; background: rgba(16, 24, 40, 0.7);
-            color: white; border: none; border-radius: 6px; padding: 3px 6px;
-            font-size: 0.7rem; font-weight: 500; cursor: pointer; backdrop-filter: blur(4px);
-        }
-
-        .list-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-        .tag {
-            background: var(--ring); color: var(--accent); padding: 3px 8px;
-            border-radius: 12px; font-size: 0.7rem; font-weight: 600;
-            display: flex; align-items: center; gap: 4px; border: 1px solid var(--accent);
-        }
-        .tag span { cursor: pointer; font-size: 0.9rem; line-height: 1; }
-
-        .add-row { display: flex; gap: 6px; margin-top: 12px; }
-        .add-row input, .add-row select { flex: 1; width: auto; }
-
-        .footer {
-            padding: 12px 24px; background: var(--header-bg); border-top: 1px solid var(--border);
-            display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0;
-        }
-
-        button {
-            padding: 8px 14px; border-radius: 6px; font-size: 0.85rem;
-            font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid transparent;
-        }
-
-        .btn-primary { background-color: var(--accent); color: white; border-color: var(--accent); }
-        .btn-primary:hover { background-color: var(--accent-hover); }
-        .btn-secondary { background-color: var(--bg-color); color: var(--text-main); border-color: var(--border); }
-        .btn-secondary:hover { background-color: var(--secondary-bg); }
-
-        .switch { position: relative; display: inline-block; width: 36px; height: 18px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .3s; border-radius: 18px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(18px); }
-
-        .hidden { display: none !important; }
-
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: var(--pulse-opacity-start); } 50% { transform: scale(1.05); opacity: var(--pulse-opacity-end); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
         .notification {
             position: fixed; bottom: 24px; left: 24px; right: 24px; padding: 16px;
             border-radius: 10px; background: var(--card-bg); border: 1px solid var(--border);
             box-shadow: 0 12px 24px rgba(0,0,0,0.15); z-index: 1100;
             display: flex; flex-direction: column; gap: 8px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes slideUp { from { transform: translateY(100%) opacity: 0; } to { transform: translateY(0) opacity: 1; } }
+
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
     <div class="header">
-        <img src="https://pausecat.app/assets/pauseCat.ico" alt="PauseCat">
+        <img id="header-logo" src="https://pausecat.app/assets/pauseCat.ico" alt="PauseCat">
         <h1>PauseCat Settings</h1>
     </div>
 
     <div class="scroll-container">
-        <!-- Professional Update Popup (Modal) -->
+        <!-- Update Modal -->
         <div id="update-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <span class="modal-title">✨ Update Available</span>
-                <span id="update-modal-desc" class="modal-desc">A newer version of PauseCat is ready for you. Experience new features and better performance!</span>
-                
+                <span id="update-modal-desc" class="modal-desc">A newer version is ready!</span>
                 <div id="update-progress-section" class="hidden">
-                    <div class="progress-container">
-                        <div id="update-progress-bar" class="progress-bar"></div>
-                    </div>
+                    <div class="progress-container"><div id="update-progress-bar" class="progress-bar"></div></div>
                     <span id="update-progress-label" style="font-size: 0.8rem; opacity: 0.8;">Downloading... 0%</span>
                 </div>
-
                 <div id="update-actions" style="display: flex; justify-content: center; gap: 12px;">
                     <button class="btn-secondary" onclick="hideUpdateModal()">Later</button>
                     <button class="btn-primary" onclick="startUpdate()">Update Now</button>
@@ -258,7 +256,7 @@
             </div>
         </div>
 
-        <!-- Custom Notification Popup -->
+        <!-- Notification -->
         <div id="notification-box" class="notification hidden">
             <span id="notification-title" style="font-weight: 700; font-size: 0.9rem;">Notification</span>
             <span id="notification-msg" style="font-size: 0.85rem; opacity: 0.8;">Message details go here.</span>
@@ -269,27 +267,116 @@
         <div class="preview-container">
             <img id="live-preview-bg-img" class="preview-bg hidden">
             <video id="live-preview-bg-vid" class="preview-bg hidden" autoplay loop muted></video>
+            <div id="preview-text-container" class="preview-text-3d-container hidden">
+                <div id="preview-text-3d" class="preview-text-3d">PAUSE</div>
+            </div>
             <div id="live-preview-bubble" class="preview-bubble">5:00</div>
+        </div>
+        <div class="status-footer">
+            <div id="asset-status">
+                <span id="asset-dot" class="status-dot"></span>
+                <span id="asset-label">Checking assets...</span>
+            </div>
+            <div id="app-version">v1.0.2</div>
         </div>
 
         <div class="section-title">Schedule</div>
         <div class="card">
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Work Duration</span>
-                    <span class="setting-description">Minutes before break</span>
-                </div>
-                <div class="control">
-                    <input type="number" id="work_duration" min="5" max="240" step="5">
-                </div>
+                <div class="setting-info"><span class="setting-label">Work Duration</span><span class="setting-description">Minutes before rest</span></div>
+                <div class="setting-control"><input type="number" id="work_duration" min="5" max="240"></div>
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Break Duration</span>
-                    <span class="setting-description">Minutes break lasts (Max 120)</span>
+                <div class="setting-info"><span class="setting-label">Break Duration</span><span class="setting-description">Rest period length</span></div>
+                <div class="setting-control"><input type="number" id="break_duration" min="1" max="120"></div>
+            </div>
+        </div>
+
+        <div class="section-title">Visuals</div>
+        <div class="card">
+            <div class="setting-row">
+                <div class="setting-info"><span class="setting-label">Break Style</span><span class="setting-description">Render mode</span></div>
+                <div class="setting-control">
+                    <select id="break_style" onchange="toggleBreakStyle()">
+                        <option value="media">Cinematic Media</option>
+                        <option value="text">3D Dynamic Text</option>
+                    </select>
                 </div>
-                <div class="control">
-                    <input type="number" id="break_duration" min="1" max="120" step="1" oninput="validateBreakDuration()">
+            </div>
+
+            <div id="text-style-options" class="hidden">
+                <div class="section-title" style="margin-top: 24px;">Text Customization</div>
+                <div class="setting-info"><span class="setting-label">Custom Text</span></div>
+                <div class="add-row" style="margin-top:8px;"><input type="text" id="custom_text" maxlength="20" placeholder="PAUSE" oninput="updatePreviewFromUI()"></div>
+
+                <div class="setting-row" style="margin-top: 20px;">
+                    <div class="setting-info"><span class="setting-label">Adaptive Color</span><span class="setting-description">Auto-theme contrast</span></div>
+                    <div class="setting-control"><label class="switch"><input type="checkbox" id="adaptive_text_color" onchange="updatePreviewFromUI()"><span class="slider"></span></label></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">Text Animation</span><span class="setting-description">Movement style</span></div>
+                    <div class="setting-control">
+                        <select id="text_animation" onchange="updatePreviewFromUI()">
+                            <option value="none">Static</option>
+                            <option value="float">Gentle Float</option>
+                            <option value="rotate">3D Rotate</option>
+                            <option value="swing">Swing</option>
+                            <option value="pulse">Soft Pulse</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">3D Tilt X</span><span class="setting-description">Vertical rotation</span></div>
+                    <div class="setting-control"><input type="range" id="text_rotation_x" min="-90" max="90" oninput="updatePreviewFromUI()"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">3D Tilt Y</span><span class="setting-description">Horizontal rotation</span></div>
+                    <div class="setting-control"><input type="range" id="text_rotation_y" min="-90" max="90" oninput="updatePreviewFromUI()"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">3D Tilt Z</span><span class="setting-description">Clockwise rotation</span></div>
+                    <div class="setting-control"><input type="range" id="text_rotation_z" min="-180" max="180" oninput="updatePreviewFromUI()"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">Base Color</span><span class="setting-description">Static text color</span></div>
+                    <div class="setting-control"><input type="color" id="text_color" oninput="updatePreviewFromUI()"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">Text Depth</span><span class="setting-description">3D Extrusion</span></div>
+                    <div class="setting-control"><input type="range" id="text_depth" min="1" max="25" oninput="updatePreviewFromUI()"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">Enable Glow</span><span class="setting-description">Neon Bloom FX</span></div>
+                    <div class="setting-control"><label class="switch"><input type="checkbox" id="text_glow_enabled" onchange="updatePreviewFromUI()"><span class="slider"></span></label></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">Glow Color</span><span class="setting-description">Aura hue</span></div>
+                    <div class="setting-control"><input type="color" id="text_glow_color" oninput="updatePreviewFromUI()"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">Glow Intensity</span><span class="setting-description">Spread radius</span></div>
+                    <div class="setting-control"><input type="range" id="text_glow" min="0" max="60" oninput="updatePreviewFromUI()"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><span class="setting-label">Opacity</span><span class="setting-description">Text translucency</span></div>
+                    <div class="setting-control"><input type="range" id="text_opacity" min="0.05" max="1.0" step="0.05" oninput="updatePreviewFromUI()"></div>
+                </div>
+            </div>
+
+            <div id="media-style-options">
+                <div class="setting-row" style="margin-top: 20px;">
+                    <div class="setting-info"><span class="setting-label">Video Volume</span><span class="setting-description">Audio level</span></div>
+                    <div class="setting-control"><input type="range" id="video_volume" min="0" max="1" step="0.01" oninput="updatePreviewFromUI()"></div>
+                </div>
+                <div class="media-preview-area">
+                    <div class="media-preview" onclick="selectMedia()">
+                        <div id="media-empty" class="media-placeholder">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            <span style="margin-top:8px;">Change Background</span>
+                        </div>
+                        <img id="preview-img" class="hidden">
+                        <video id="preview-video" class="hidden" muted loop></video>
+                    </div>
                 </div>
             </div>
         </div>
@@ -297,145 +384,75 @@
         <div class="section-title">Bubble Designer</div>
         <div class="card">
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Transparency</span>
-                    <span class="setting-description">Glass effect intensity</span>
-                </div>
-                <input type="range" id="bubble_opacity" min="0.05" max="0.95" step="0.05" oninput="updatePreviewFromUI()">
+                <div class="setting-info"><span class="setting-label">Transparency</span><span class="setting-description">Glass intensity</span></div>
+                <div class="setting-control"><input type="range" id="bubble_opacity" min="0.05" max="0.95" step="0.05" oninput="updatePreviewFromUI()"></div>
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Bubble Size</span>
-                    <span class="setting-description">Diameter (Small to Large)</span>
-                </div>
-                <input type="range" id="bubble_size" min="300" max="800" step="10" oninput="updatePreviewFromUI()">
+                <div class="setting-info"><span class="setting-label">Bubble Size</span><span class="setting-description">Diameter</span></div>
+                <div class="setting-control"><input type="range" id="bubble_size" min="300" max="800" step="10" oninput="updatePreviewFromUI()"></div>
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Horizontal Position</span>
-                    <span class="setting-description">Left to Right (%)</span>
-                </div>
-                <input type="range" id="bubble_pos_x" min="0" max="100" step="1" oninput="updatePreviewFromUI()">
+                <div class="setting-info"><span class="setting-label">Position X</span><span class="setting-description">Horizontal offset</span></div>
+                <div class="setting-control"><input type="range" id="bubble_pos_x" min="0" max="100" oninput="updatePreviewFromUI()"></div>
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Vertical Position</span>
-                    <span class="setting-description">Top to Bottom (%)</span>
-                </div>
-                <input type="range" id="bubble_pos_y" min="0" max="100" step="1" oninput="updatePreviewFromUI()">
+                <div class="setting-info"><span class="setting-label">Position Y</span><span class="setting-description">Vertical offset</span></div>
+                <div class="setting-control"><input type="range" id="bubble_pos_y" min="0" max="100" oninput="updatePreviewFromUI()"></div>
             </div>
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Animation Style</span>
-                    <span class="setting-description">Movement behavior</span>
-                </div>
-                <select id="animation_style" onchange="updatePreviewFromUI()">
-                    <option value="none">Static</option>
-                    <option value="float">Gentle Float</option>
-                    <option value="bounce">Elastic Bounce</option>
-                    <option value="pulse">Soft Pulse</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="section-title">Visuals</div>
-        <div class="card">
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Break Mode</span>
-                    <span class="setting-description">Lock desktop during break</span>
-                </div>
-                <div class="control">
-                    <select id="mode">
-                        <option value="soft">Soft Mode</option>
-                        <option value="hard">Hard Mode</option>
+                <div class="setting-info"><span class="setting-label">Bubble Animation</span><span class="setting-description">Idle behavior</span></div>
+                <div class="setting-control">
+                    <select id="animation_style" onchange="updatePreviewFromUI()">
+                        <option value="none">Static</option>
+                        <option value="float">Gentle Float</option>
+                        <option value="bounce">Elastic Bounce</option>
+                        <option value="pulse">Soft Pulse</option>
                     </select>
                 </div>
             </div>
-            
-            <div class="setting-info" style="margin-top: 16px;">
-                <span class="setting-label">Background Media</span>
-                <span class="setting-description">Select your own vibe</span>
-            </div>
-            <div class="media-preview-area">
-                <div class="media-preview" onclick="selectMedia()">
-                    <div id="media-empty" class="media-placeholder">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        <span>Change Background</span>
-                    </div>
-                    <img id="preview-img" class="hidden">
-                    <video id="preview-video" class="hidden" muted loop></video>
-                </div>
-                <button id="reset-btn" class="reset-media hidden" onclick="resetToDefault(event)">Reset to Default</button>
-            </div>
         </div>
 
-        <div class="section-title">Content</div>
+        <div class="section-title">Content & Messages</div>
         <div class="card">
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Show Work Status</span>
-                    <span class="setting-description">Display 'Working for X' timer</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="show_work_status">
-                    <span class="slider"></span>
-                </label>
+                <div class="setting-info"><span class="setting-label">Show Timer</span><span class="setting-description">Display work duration</span></div>
+                <div class="setting-control"><label class="switch"><input type="checkbox" id="show_work_status"><span class="slider"></span></label></div>
             </div>
-
-            <div class="setting-row" style="margin-top: 16px;">
-                <div class="setting-info">
-                    <span class="setting-label">Randomize Messages</span>
-                    <span class="setting-description">Pick random message per break</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="randomize_messages">
-                    <span class="slider"></span>
-                </label>
+            <div class="setting-row">
+                <div class="setting-info"><span class="setting-label">Randomize</span><span class="setting-description">Pick random messages</span></div>
+                <div class="setting-control"><label class="switch"><input type="checkbox" id="randomize_messages"><span class="slider"></span></label></div>
             </div>
-
             <div class="setting-info" style="margin-top: 16px;">
                 <span class="setting-label">Custom Messages</span>
-                <span class="setting-description">Messages to show during rest</span>
+                <span class="setting-description">Displayed during breaks</span>
             </div>
             <div id="break-messages-tags" class="list-container"></div>
             <div class="add-row">
                 <input type="text" id="new-message-input" placeholder="New message...">
-                <button class="btn-primary" style="padding: 6px 12px;" onclick="addBreakMessage()">Add</button>
+                <button class="btn-primary" style="padding: 8px 14px;" onclick="addBreakMessage()">Add</button>
             </div>
         </div>
 
         <div class="section-title">Whitelist</div>
         <div class="card">
+            <div class="setting-info">
+                <span class="setting-label">Active Focus Whitelist</span>
+                <span class="setting-description">Breaks won't trigger for these apps</span>
+            </div>
             <div id="whitelist-tags" class="list-container"></div>
             <div class="add-row">
-                <select id="running-apps-select">
-                    <option value="">Select app...</option>
-                </select>
-                <button class="btn-secondary" style="padding: 8px 12px;" onclick="refreshApps()">Refresh</button>
-                <button class="btn-primary" style="padding: 8px 12px;" onclick="addWhitelistedApp()">Add</button>
+                <select id="running-apps-select" style="flex: 1;"><option value="">Select app...</option></select>
+                <button class="btn-primary" style="padding: 8px 14px;" onclick="addWhitelistedApp()">Add</button>
             </div>
         </div>
 
         <div class="section-title">System</div>
         <div class="card">
             <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">Launch on Startup</span>
-                    <span class="setting-description">Auto-start PauseCat</span>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="autostart">
-                    <span class="slider"></span>
-                </label>
+                <div class="setting-info"><span class="setting-label">Launch on Startup</span><span class="setting-description">Start with Windows</span></div>
+                <div class="setting-control"><label class="switch"><input type="checkbox" id="autostart"><span class="slider"></span></label></div>
             </div>
-            <div class="setting-row">
-                <div class="setting-info">
-                    <span class="setting-label">App Updates</span>
-                    <span class="setting-description">Check for new versions on GitHub</span>
-                </div>
-                <button id="check-update-btn" class="btn-secondary" onclick="checkUpdates()">Check for Updates</button>
-            </div>
+            <button id="check-update-btn" class="btn-secondary" style="width:100%; margin-top:12px;" onclick="checkUpdates()">Check for Updates</button>
         </div>
     </div>
 
@@ -445,9 +462,6 @@
     </div>
 
     <script>
-        document.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-        document.addEventListener('gesturestart', (e) => e.preventDefault());
-
         let currentMediaPath = "";
         let currentWhitelist = [];
         let currentBreakMessages = [];
@@ -467,193 +481,290 @@
         }
         function hideUpdateModal() { document.getElementById('update-modal').classList.add('hidden'); }
 
-        function selectMedia() { window.chrome.webview.postMessage({ action: "select_media" }); }
-        function refreshApps() { window.chrome.webview.postMessage({ action: "get_apps" }); }
-        
-        function checkUpdates() {
-            const btn = document.getElementById('check-update-btn');
-            btn.disabled = true; btn.innerText = "Checking...";
-            window.chrome.webview.postMessage({ action: "check_updates" });
+        function toggleBreakStyle() {
+            const style = document.getElementById('break_style').value;
+            document.getElementById('text-style-options').classList.toggle('hidden', style !== 'text');
+            document.getElementById('media-style-options').classList.toggle('hidden', style === 'text');
+            updatePreviewFromUI();
         }
 
-        function startUpdate() {
-            document.getElementById('update-actions').classList.add('hidden');
-            document.getElementById('update-progress-section').classList.remove('hidden');
-            window.chrome.webview.postMessage({ action: "start_update" });
+        function generate3DShadow(color, depth) {
+            let shadows = [];
+            for (let i = 1; i <= depth; i++) { shadows.push(`${i}px ${i}px 0px ${adjustColor(color, -i * 6)}`); }
+            shadows.push(`0 ${depth}px 20px rgba(0,0,0,0.5)`);
+            return shadows.join(', ');
         }
 
-        function resetToDefault(event) {
-            event.stopPropagation(); currentMediaPath = "default.webm"; updatePreview("default.webm");
-        }
-
-        function addWhitelistedApp() {
-            const select = document.getElementById('running-apps-select');
-            const app = select.value;
-            if (app && !currentWhitelist.includes(app)) {
-                currentWhitelist.push(app); renderList('whitelist-tags', currentWhitelist, 'whitelist');
-            }
-        }
-
-        function addBreakMessage() {
-            const input = document.getElementById('new-message-input');
-            const msg = input.value.trim();
-            if (msg && !currentBreakMessages.includes(msg)) {
-                currentBreakMessages.push(msg); input.value = ""; renderList('break-messages-tags', currentBreakMessages, 'messages');
-            }
-        }
-
-        function renderList(containerId, list, type) {
-            const container = document.getElementById(containerId); container.innerHTML = "";
-            list.forEach(item => {
-                const tag = document.createElement('div');
-                tag.className = 'tag';
-                tag.innerHTML = `${item} <span onclick="window.handleRemove('${type}', '${item.replace(/'/g, "\\'")}')">&times;</span>`;
-                container.appendChild(tag);
-            });
-        }
-
-        window.handleRemove = (type, item) => {
-            if (type === 'whitelist') {
-                currentWhitelist = currentWhitelist.filter(i => i !== item); renderList('whitelist-tags', currentWhitelist, 'whitelist');
-            } else {
-                currentBreakMessages = currentBreakMessages.filter(i => i !== item); renderList('break-messages-tags', currentBreakMessages, 'messages');
-            }
-        };
-
-        function validateBreakDuration() {
-            const input = document.getElementById('break_duration');
-            const val = parseInt(input.value);
-            if (val > 120) {
-                input.style.borderColor = 'var(--danger-text)';
-                input.style.boxShadow = '0 0 0 3px var(--danger-border)';
-            } else {
-                input.style.borderColor = 'var(--border)';
-                input.style.boxShadow = 'none';
-            }
+        function adjustColor(hex, amount) {
+            if (!hex || !hex.startsWith('#')) return hex;
+            let num = parseInt(hex.slice(1), 16);
+            let r = Math.max(0, Math.min(255, (num >> 16) + amount));
+            let g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount));
+            let b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount));
+            return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
         }
 
         function updatePreviewFromUI() {
-            const bubble = document.getElementById('live-preview-bubble');
-            const opacity = parseFloat(document.getElementById('bubble_opacity').value);
-            const size = parseInt(document.getElementById('bubble_size').value);
-            const posX = parseInt(document.getElementById('bubble_pos_x').value);
-            const posY = parseInt(document.getElementById('bubble_pos_y').value);
-            const anim = document.getElementById('animation_style').value;
-            const previewSize = size / 4.8;
-            bubble.style.width = previewSize + "px"; bubble.style.height = previewSize + "px"; bubble.style.fontSize = (previewSize / 4) + "px";
-            bubble.style.backgroundColor = isDarkMode ? `rgba(0,0,0,${opacity})` : `rgba(255,255,255,${opacity})`;
-            bubble.style.left = `calc(${posX}% - ${previewSize * (posX/100)}px)`;
-            bubble.style.top = `calc(${posY}% - ${previewSize * (posY/100)}px)`;
-            if (anim === 'pulse') {
-                bubble.style.setProperty('--pulse-opacity-start', opacity);
-                bubble.style.setProperty('--pulse-opacity-end', Math.max(0, opacity - 0.3));
-                bubble.style.animation = `pulse 2s ease-in-out infinite`;
-            } else if (anim !== 'none') { bubble.style.animation = `${anim} 3s ease-in-out infinite`;
-            } else { bubble.style.animation = 'none'; }
+            try {
+                const previewContainer = document.querySelector('.preview-container');
+                const bubble = document.getElementById('live-preview-bubble');
+                const style = document.getElementById('break_style').value;
+                const isDark = isDarkMode;
+
+                const opacity = document.getElementById('bubble_opacity').value;
+                const size = document.getElementById('bubble_size').value;
+                const posX = document.getElementById('bubble_pos_x').value;
+                const posY = document.getElementById('bubble_pos_y').value;
+                const anim = document.getElementById('animation_style').value;
+
+                const virtualWidth = 1920;
+                const actualWidth = previewContainer.offsetWidth;
+                const scale = actualWidth / virtualWidth;
+
+                bubble.style.width = (size * scale) + "px";
+                bubble.style.height = (size * scale) + "px";
+                bubble.style.fontSize = (size * scale / 5) + "px";
+                bubble.style.backgroundColor = isDark ? `rgba(0,0,0,${opacity})` : `rgba(255,255,255,${opacity})`;
+                bubble.style.left = `calc(${posX}% - ${(size * scale) * (posX/100)}px)`;
+                bubble.style.top = `calc(${posY}% - ${(size * scale) * (posY/100)}px)`;
+
+                if (anim === 'pulse') {
+                    bubble.style.setProperty('--pulse-opacity-start', opacity);
+                    bubble.style.setProperty('--pulse-opacity-end', Math.max(0, opacity - 0.3));
+                    bubble.style.animation = `pulse 2s ease-in-out infinite`;
+                } else if (anim !== 'none') { bubble.style.animation = `${anim} 3s ease-in-out infinite`; }
+                else { bubble.style.animation = 'none'; }
+                
+                const textContainer = document.getElementById('preview-text-container');
+                const text3d = document.getElementById('preview-text-3d');
+                const bgImg = document.getElementById('live-preview-bg-img');
+                const bgVid = document.getElementById('live-preview-bg-vid');
+
+                if (style === 'text') {
+                    textContainer.classList.remove('hidden');
+                    bgImg.classList.add('hidden'); bgVid.classList.add('hidden');
+
+                    const isAdaptive = document.getElementById('adaptive_text_color').checked;
+                    const baseColor = document.getElementById('text_color').value;
+                    const finalColor = isAdaptive ? (isDark ? '#ffffff' : '#000000') : baseColor;
+                    
+                    text3d.innerText = document.getElementById('custom_text').value || "PAUSE";
+                    text3d.style.setProperty('--text-color', finalColor);
+                    text3d.style.fontSize = (15 * (actualWidth / 100)) + "px"; 
+
+                    text3d.style.setProperty('--rot-x', document.getElementById('text_rotation_x').value + 'deg');
+                    text3d.style.setProperty('--rot-y', document.getElementById('text_rotation_y').value + 'deg');
+                    text3d.style.setProperty('--rot-z', document.getElementById('text_rotation_z').value + 'deg');
+                    text3d.style.setProperty('--text-opacity', document.getElementById('text_opacity').value);
+                    text3d.style.setProperty('--text-3d-shadow', generate3DShadow(finalColor, parseInt(document.getElementById('text_depth').value)));
+                    
+                    if (document.getElementById('text_glow_enabled').checked) {
+                        const glowColor = document.getElementById('text_glow_color').value;
+                        text3d.style.setProperty('--text-glow-filter', `drop-shadow(0 0 ${document.getElementById('text_glow').value * scale * 4}px ${glowColor})`);
+                    } else {
+                        text3d.style.setProperty('--text-glow-filter', 'none');
+                    }
+                } else {
+                    textContainer.classList.add('hidden');
+                    updatePreview(currentMediaPath);
+                }
+            } catch (e) { console.warn("Preview Sync Error:", e); }
         }
 
         function save() {
-            const workDuration = parseInt(document.getElementById('work_duration').value);
-            const breakDuration = parseInt(document.getElementById('break_duration').value);
-
-            if (breakDuration > 120) {
-                showNotification("Invalid Duration", "Break duration cannot exceed 120 minutes (2 hours).");
-                return;
-            }
-
-            if (workDuration > 240) {
-                showNotification("Invalid Duration", "Work duration cannot exceed 240 minutes (4 hours).");
-                return;
-            }
-
+            const getVal = (id) => document.getElementById(id).value;
+            const getCheck = (id) => document.getElementById(id).checked;
             const settings = {
-                work_duration_secs: workDuration * 60,
-                break_duration_secs: breakDuration * 60,
-                mode: document.getElementById('mode').value,
-                autostart: document.getElementById('autostart').checked,
+                work_duration_secs: getVal('work_duration') * 60,
+                break_duration_secs: getVal('break_duration') * 60,
+                mode: "soft",
+                autostart: getCheck('autostart'),
                 overlay_animation: currentMediaPath || "default.webm",
                 whitelist: currentWhitelist,
-                randomize_messages: document.getElementById('randomize_messages').checked,
+                randomize_messages: getCheck('randomize_messages'),
                 break_messages: currentBreakMessages,
-                show_work_duration_status: document.getElementById('show_work_status').checked,
-                bubble_opacity: parseFloat(document.getElementById('bubble_opacity').value),
-                bubble_size: parseInt(document.getElementById('bubble_size').value),
-                bubble_pos_x: parseInt(document.getElementById('bubble_pos_x').value),
-                bubble_pos_y: parseInt(document.getElementById('bubble_pos_y').value),
-                animation_style: document.getElementById('animation_style').value
+                show_work_duration_status: getCheck('show_work_status'),
+                bubble_opacity: parseFloat(getVal('bubble_opacity')),
+                bubble_size: parseInt(getVal('bubble_size')),
+                bubble_pos_x: parseInt(getVal('bubble_pos_x')),
+                bubble_pos_y: parseInt(getVal('bubble_pos_y')),
+                animation_style: getVal('animation_style'),
+                break_style: getVal('break_style'),
+                custom_text: getVal('custom_text') || "PAUSE",
+                video_volume: parseFloat(getVal('video_volume')),
+                text_animation: getVal('text_animation'),
+                text_rotation_x: parseInt(getVal('text_rotation_x')),
+                text_rotation_y: parseInt(getVal('text_rotation_y')),
+                text_rotation_z: parseInt(getVal('text_rotation_z')),
+                text_color: getVal('text_color'),
+                text_opacity: parseFloat(getVal('text_opacity')),
+                text_glow: parseFloat(getVal('text_glow')),
+                text_glow_enabled: getCheck('text_glow_enabled'),
+                text_glow_color: getVal('text_glow_color'),
+                text_depth: parseInt(getVal('text_depth')),
+                adaptive_text_color: getCheck('adaptive_text_color')
             };
             window.chrome.webview.postMessage({ action: "save", settings: settings });
         }
 
         window.chrome.webview.addEventListener('message', event => {
-            if (event.data.action === "load") {
-                const s = event.data.settings;
-                document.getElementById('work_duration').value = s.work_duration_secs / 60;
-                document.getElementById('break_duration').value = s.break_duration_secs / 60;
-                document.getElementById('mode').value = s.mode;
-                document.getElementById('autostart').checked = s.autostart;
-                document.getElementById('randomize_messages').checked = s.randomize_messages;
-                document.getElementById('show_work_status').checked = s.show_work_duration_status !== false;
-                document.getElementById('bubble_opacity').value = s.bubble_opacity || 0.1;
-                document.getElementById('bubble_size').value = s.bubble_size || 580;
-                document.getElementById('bubble_pos_x').value = s.bubble_pos_x || 5;
-                document.getElementById('bubble_pos_y').value = s.bubble_pos_y || 5;
-                document.getElementById('animation_style').value = s.animation_style || "float";
-                if (s.overlay_animation) updatePreview(s.overlay_animation);
+            const data = event.data;
+            if (data.action === "load") {
+                const s = data.settings;
+                isDarkMode = data.isDark;
+                document.body.classList.toggle('dark', isDarkMode);
+
+                const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+                const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+
+                setVal('work_duration', s.work_duration_secs / 60);
+                setVal('break_duration', s.break_duration_secs / 60);
+                setVal('bubble_opacity', s.bubble_opacity ?? 0.1);
+                setVal('bubble_size', s.bubble_size ?? 580);
+                setVal('bubble_pos_x', s.bubble_pos_x ?? 5);
+                setVal('bubble_pos_y', s.bubble_pos_y ?? 5);
+                setVal('animation_style', s.animation_style || "float");
+                setVal('break_style', s.break_style || "text");
+                setVal('custom_text', s.custom_text || "PAUSE");
+                setVal('video_volume', s.video_volume ?? 0.0);
+                setVal('text_animation', s.text_animation || "float");
+                setVal('text_rotation_x', s.text_rotation_x ?? 20);
+                setVal('text_rotation_y', s.text_rotation_y ?? -20);
+                setVal('text_rotation_z', s.text_rotation_z ?? 0);
+                setVal('text_color', s.text_color || "#ffffff");
+                setVal('text_opacity', s.text_opacity ?? 0.15);
+                setVal('text_glow', s.text_glow ?? 10);
+                setCheck('text_glow_enabled', s.text_glow_enabled !== false);
+                setVal('text_glow_color', s.text_glow_color || "#ffffff");
+                setVal('text_depth', s.text_depth ?? 5);
+                setCheck('adaptive_text_color', s.adaptive_text_color !== false);
+                setCheck('autostart', s.autostart);
+                setCheck('randomize_messages', s.randomize_messages);
+                setCheck('show_work_status', s.show_work_duration_status !== false);
+
+                currentMediaPath = s.overlay_animation || "default.webm";
+                updatePreview(currentMediaPath);
+
+                if (data.logoPath) document.getElementById('header-logo').src = data.logoPath;
+                document.getElementById('app-version').innerText = `v${data.version || '1.0.2'}`;
+                
+                const dot = document.getElementById('asset-dot');
+                const label = document.getElementById('asset-label');
+                if (data.assetReady) { dot.className = 'status-dot dot-ready'; label.innerText = 'Cinematic Assets: Ready'; }
+                else { dot.className = 'status-dot dot-missing'; label.innerText = 'Cinematic Assets: Syncing...'; }
+
                 currentWhitelist = s.whitelist || []; renderList('whitelist-tags', currentWhitelist, 'whitelist');
-                currentBreakMessages = s.break_messages || ["Breathe In..."]; renderList('break-messages-tags', currentBreakMessages, 'messages');
-                isDarkMode = event.data.isDark;
-                if (isDarkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark');
+                currentBreakMessages = s.break_messages || []; renderList('break-messages-tags', currentBreakMessages, 'messages');
+
+                toggleBreakStyle();
                 window.chrome.webview.postMessage({ action: "get_apps" });
+            } else if (data.action === "asset_synced") {
+                const dot = document.getElementById('asset-dot');
+                dot.className = 'status-dot dot-ready';
+                document.getElementById('asset-label').innerText = 'Cinematic Assets: Ready';
                 updatePreviewFromUI();
-            } else if (event.data.action === "media_selected") {
-                updatePreview(event.data.path);
-            } else if (event.data.action === "theme_changed") {
-                isDarkMode = event.data.isDark; if (isDarkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark'); updatePreviewFromUI();
-            } else if (event.data.action === "apps_list") {
-                const select = document.getElementById('running-apps-select');
-                select.innerHTML = '<option value="">Select app...</option>';
-                event.data.apps.forEach(app => {
-                    const opt = document.createElement('option'); opt.value = app; opt.textContent = app; select.appendChild(opt);
-                });
-            } else if (event.data.action === "update_status") {
-                const btn = document.getElementById('check-update-btn');
-                btn.disabled = false; btn.innerText = "Check for Updates";
-                if (event.data.info.available) {
-                    showUpdateModal(event.data.info.latest_version);
-                } else {
-                    showNotification("Up to Date", "PauseCat is already running the latest version.");
+            } else if (data.action === "asset_progress") {
+                document.getElementById('asset-label').innerText = `Cinematic Assets: Syncing (${data.percentage}%)`;
+                let progressContainer = document.getElementById('asset-status').querySelector('.asset-progress-container');
+                if (!progressContainer) {
+                    progressContainer = document.createElement('div');
+                    progressContainer.className = 'asset-progress-container';
+                    progressContainer.innerHTML = '<div class="asset-progress-bar"></div>';
+                    document.getElementById('asset-status').appendChild(progressContainer);
                 }
-            } else if (event.data.action === "update_progress") {
-                const progress = event.data.percentage;
-                document.getElementById('update-progress-bar').style.width = progress + "%";
-                document.getElementById('update-progress-label').innerText = `Downloading... ${progress}%`;
-            } else if (event.data.action === "update_error") {
+                progressContainer.querySelector('.asset-progress-bar').style.width = data.percentage + "%";
+            } else if (data.action === "asset_error") {
+                document.getElementById('asset-dot').className = 'status-dot dot-error';
+                document.getElementById('asset-label').innerText = 'Cinematic Assets: Failed';
+                if (!document.getElementById('asset-retry-btn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'asset-retry-btn'; btn.className = 'retry-btn'; btn.innerText = 'Retry';
+                    btn.onclick = retrySync;
+                    document.getElementById('asset-status').appendChild(btn);
+                }
+            } else if (data.action === "theme_changed") {
+                isDarkMode = data.isDark; document.body.classList.toggle('dark', isDarkMode); updatePreviewFromUI();
+            } else if (data.action === "apps_list") {
+                const sel = document.getElementById('running-apps-select');
+                sel.innerHTML = '<option value="">Select app...</option>';
+                (data.apps || []).forEach(a => { const o = document.createElement('option'); o.value = a; o.innerText = a; sel.appendChild(o); });
+            } else if (data.action === "media_selected") {
+                currentMediaPath = data.path; updatePreview(data.path);
+            } else if (data.action === "update_status") {
                 const btn = document.getElementById('check-update-btn');
                 btn.disabled = false; btn.innerText = "Check for Updates";
-                hideUpdateModal();
-                showNotification("Update Error", event.data.error);
+                if (data.info.available) showUpdateModal(data.info.latest_version);
+                else showNotification("Up to Date", "You have the latest version.");
+            } else if (data.action === "update_progress") {
+                document.getElementById('update-progress-bar').style.width = data.percentage + "%";
+                document.getElementById('update-progress-label').innerText = `Downloading... ${data.percentage}%`;
+            } else if (data.action === "update_error") {
+                const btn = document.getElementById('check-update-btn');
+                btn.disabled = false; btn.innerText = "Check for Updates";
+                hideUpdateModal(); showNotification("Update Error", data.error);
             }
         });
 
-        function updatePreview(path) {
-            currentMediaPath = path;
-            const empty = document.getElementById('media-empty');
-            const img = document.getElementById('preview-img');
-            const video = document.getElementById('preview-video');
-            const resetBtn = document.getElementById('reset-btn');
-            const liveImg = document.getElementById('live-preview-bg-img');
-            const liveVid = document.getElementById('live-preview-bg-vid');
-            [empty, img, video, liveImg, liveVid].forEach(el => el.classList.add('hidden'));
-            if (path === "default.webm") resetBtn.classList.add('hidden'); else resetBtn.classList.remove('hidden');
-            const formattedPath = (path === "default.webm") ? "https://pausecat.app/assets/default.webm" : (path.startsWith('https://') ? path : 'https://pausecat.app/local/' + btoa(path));
-            const ext = path.split('.').pop().toLowerCase();
-            if (['mp4', 'webm', 'ogg'].includes(ext)) {
-                video.src = formattedPath; video.classList.remove('hidden'); liveVid.src = formattedPath; liveVid.classList.remove('hidden'); video.play().catch(() => {});
-            } else {
-                img.src = formattedPath; img.classList.remove('hidden'); liveImg.src = formattedPath; liveImg.classList.remove('hidden');
-            }
+        function renderList(id, list, type) {
+            const container = document.getElementById(id); if (!container) return;
+            container.innerHTML = "";
+            list.forEach(item => {
+                const tag = document.createElement('div'); tag.className = 'tag';
+                tag.innerHTML = `${item} <span onclick="removeItem('${type}', '${item.replace(/'/g, "\\'")}')">&times;</span>`;
+                container.appendChild(tag);
+            });
         }
+        function removeItem(type, item) {
+            if (type === 'whitelist') { currentWhitelist = currentWhitelist.filter(i => i !== item); renderList('whitelist-tags', currentWhitelist, 'whitelist'); }
+            else { currentBreakMessages = currentBreakMessages.filter(i => i !== item); renderList('break-messages-tags', currentBreakMessages, 'messages'); }
+        }
+        function addBreakMessage() {
+            const el = document.getElementById('new-message-input'); const val = el.value.trim();
+            if (val && !currentBreakMessages.includes(val)) { currentBreakMessages.push(val); el.value = ""; renderList('break-messages-tags', currentBreakMessages, 'messages'); }
+        }
+        function addWhitelistedApp() {
+            const val = document.getElementById('running-apps-select').value;
+            if (val && !currentWhitelist.includes(val)) { currentWhitelist.push(val); renderList('whitelist-tags', currentWhitelist, 'whitelist'); }
+        }
+        function selectMedia() { window.chrome.webview.postMessage({ action: "select_media" }); }
+        function checkUpdates() {
+            const btn = document.getElementById('check-update-btn');
+            btn.disabled = true; btn.innerText = "Checking...";
+            window.chrome.webview.postMessage({ action: "check_updates" });
+        }
+        function startUpdate() {
+            document.getElementById('update-actions').classList.add('hidden');
+            document.getElementById('update-progress-section').classList.remove('hidden');
+            window.chrome.webview.postMessage({ action: "start_update" });
+        }
+        function retrySync() { window.chrome.webview.postMessage({ action: "retry_sync" }); }
+
+        function updatePreview(path) {
+            try {
+                if (!path) return;
+                const vidMain = document.getElementById('live-preview-bg-vid');
+                const imgMain = document.getElementById('live-preview-bg-img');
+                const vidSmall = document.getElementById('preview-video');
+                const imgSmall = document.getElementById('preview-img');
+                const placeholder = document.getElementById('media-empty');
+
+                [vidMain, imgMain, vidSmall, imgSmall].forEach(el => { if(el) el.classList.add('hidden'); });
+                if (placeholder) placeholder.classList.add('hidden');
+
+                const formattedPath = (path === "default.webm") ? "https://pausecat.app/assets/default.webm" : (path.startsWith('https://') ? path : 'https://pausecat.app/local/' + btoa(path));
+                const isVideo = path.toLowerCase().endsWith('.webm') || path.toLowerCase().endsWith('.mp4');
+
+                if (isVideo) {
+                    if (vidMain) { vidMain.src = formattedPath; vidMain.classList.remove('hidden'); vidMain.play().catch(()=>{}); }
+                    if (vidSmall) { vidSmall.src = formattedPath; vidSmall.classList.remove('hidden'); vidSmall.play().catch(()=>{}); }
+                } else {
+                    if (imgMain) { imgMain.src = formattedPath; imgMain.classList.remove('hidden'); }
+                    if (imgSmall) { imgSmall.src = formattedPath; imgSmall.classList.remove('hidden'); }
+                }
+            } catch (e) { console.warn("Update Preview Error:", e); }
+        }
+
+        window.onload = () => { window.chrome.webview.postMessage({ action: "ready" }); };
     </script>
 </body>
 </html>

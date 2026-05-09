@@ -16,6 +16,10 @@ pub enum AppEvent {
     StartUpdate,
     UpdateProgress(u32), // Percentage 0-100
     UpdateError(String),
+    AssetDownloaded(String),
+    AssetDownloadProgress(u32), // Percentage 0-100
+    AssetDownloadError(String),
+    RetryAssetSync,
     SessionLocked,
     SessionUnlocked,
 }
