@@ -31,55 +31,41 @@
             --header-bg: #121212;
         }
 
-        html, body {
-            overflow: hidden;
-            touch-action: none;
-            user-select: none;
-        }
+        html, body { overflow: hidden; touch-action: none; user-select: none; }
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            background-color: var(--bg-color); color: var(--text-main);
             margin: 0; padding: 0; height: 100vh;
             display: flex; flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
         }
 
         .header {
-            padding: 16px 24px;
-            display: flex; align-items: center; gap: 12px;
-            border-bottom: 1px solid var(--border);
-            background: var(--header-bg); flex-shrink: 0;
+            padding: 16px 24px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border); background: var(--header-bg); flex-shrink: 0;
         }
-
         .header h1 { font-size: 1.125rem; font-weight: 600; margin: 0; }
         .header img { width: 28px; height: 28px; border-radius: 6px; }
 
         .scroll-container {
             flex: 1; overflow-y: auto; padding: 20px 24px;
-            background: var(--secondary-bg);
-            scrollbar-width: none;
+            background: var(--secondary-bg); scrollbar-width: none;
         }
         .scroll-container::-webkit-scrollbar { display: none; }
 
         .section-title {
-            font-size: 0.7rem; font-weight: 600;
-            color: var(--text-secondary); text-transform: uppercase;
-            letter-spacing: 0.05em; margin-bottom: 10px; margin-top: 10px;
+            font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.05em; margin: 10px 0;
         }
 
         .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px; padding: 16px;
-            margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px; margin-bottom: 20px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
-        .setting-row {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 16px; gap: 12px;
-        }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
         .setting-row:last-child { margin-bottom: 0; }
 
         .setting-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
@@ -101,7 +87,7 @@
             margin-bottom: 8px; border: 1px solid var(--border); flex-shrink: 0;
             perspective: 500px;
         }
-        .preview-bg { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; }
+        .preview-bg { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; position: absolute; top:0; left:0; }
         
         .preview-text-3d-container {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -109,12 +95,10 @@
             pointer-events: none; z-index: 1;
         }
         .preview-text-3d {
-            font-size: 3rem; font-weight: 900; 
-            color: var(--text-color, #fff);
-            text-transform: uppercase; 
+            font-size: 3rem; font-weight: 900; color: var(--text-color, #fff);
+            text-transform: uppercase; text-align: center;
             transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) rotateZ(var(--rot-z, 0deg));
-            text-shadow: var(--text-3d-shadow);
-            opacity: var(--text-opacity, 0.2); 
+            text-shadow: var(--text-3d-shadow); opacity: var(--text-opacity, 0.2); 
             animation: previewFloat 5s ease-in-out infinite;
             filter: var(--text-glow-filter, none);
         }
@@ -130,11 +114,11 @@
             display: flex; justify-content: center; align-items: center;
             color: white; font-weight: 700; pointer-events: none;
             box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 2;
+            transition: all 0.2s ease;
         }
 
         .status-footer {
-            margin-bottom: 20px; padding: 0 4px;
-            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding: 0 4px; display: flex; justify-content: space-between; align-items: center;
             font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);
         }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
@@ -144,9 +128,11 @@
         .media-preview {
             width: 100%; height: 140px; border: 2px dashed var(--border);
             border-radius: 10px; display: flex; justify-content: center; align-items: center;
-            background: var(--card-bg); cursor: pointer; overflow: hidden; margin-top: 10px;
+            background: var(--card-bg); cursor: pointer; overflow: hidden; margin-top: 10px; position: relative;
         }
         .media-preview:hover { border-color: var(--accent); }
+        .media-preview img, .media-preview video { width: 100%; height: 100%; object-fit: cover; }
+        .media-placeholder { display: flex; flex-direction: column; align-items: center; color: var(--text-secondary); font-size: 0.8rem; }
 
         .list-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
         .tag {
@@ -155,6 +141,9 @@
             display: flex; align-items: center; gap: 4px; border: 1px solid var(--accent);
         }
         .tag span { cursor: pointer; font-size: 0.9rem; }
+
+        .add-row { display: flex; gap: 6px; margin-top: 12px; }
+        .add-row input { flex: 1; }
 
         .footer {
             padding: 12px 24px; background: var(--header-bg); border-top: 1px solid var(--border);
@@ -245,7 +234,7 @@
                     </div>
                 </div>
                 <div class="setting-row" style="margin-top: 16px;">
-                    <div class="setting-info"><span class="setting-label">Glow Enabled & Color</span></div>
+                    <div class="setting-info"><span class="setting-label">Glow & Color</span></div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <label class="switch"><input type="checkbox" id="text_glow_enabled" onchange="updatePreviewFromUI()"><span class="slider"></span></label>
                         <input type="color" id="text_glow_color" oninput="updatePreviewFromUI()">
@@ -266,7 +255,7 @@
                     <input type="range" id="video_volume" min="0" max="1" step="0.01" style="width:120px;" oninput="updatePreviewFromUI()">
                 </div>
                 <div class="media-preview" onclick="selectMedia()">
-                    <div id="media-empty"><span>Change Background</span></div>
+                    <div id="media-empty" class="media-placeholder"><span>Change Background</span></div>
                     <img id="preview-img" class="hidden"><video id="preview-video" class="hidden" muted loop></video>
                 </div>
             </div>
@@ -289,7 +278,7 @@
                 </div>
             </div>
             <div class="setting-row">
-                <div class="setting-info"><span class="setting-label">Animation style</span></div>
+                <div class="setting-info"><span class="setting-label">Animation Style</span></div>
                 <select id="animation_style" onchange="updatePreviewFromUI()">
                     <option value="none">Static</option>
                     <option value="float">Gentle Float</option>
@@ -330,7 +319,7 @@
                 <div class="setting-info"><span class="setting-label">Launch on Startup</span></div>
                 <label class="switch"><input type="checkbox" id="autostart"><span class="slider"></span></label>
             </div>
-            <button id="check-update-btn" class="btn-secondary" style="width:100%; margin-top:12px;" onclick="checkUpdates()">Check for Updates</button>
+            <button id="check-update-btn" class="btn-secondary" style="width:100%; margin-top:8px;" onclick="checkUpdates()">Check for Updates</button>
         </div>
     </div>
 
@@ -365,22 +354,47 @@
             let r = Math.max(0, Math.min(255, (num >> 16) + amount));
             let g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount));
             let b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount));
-            return "#" + (b | (g << 8) | (r << 16)).toString(16).padStart(6, '0');
+            return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
         }
 
         function updatePreviewFromUI() {
             try {
-                const isDark = isDarkMode;
-                const opacity = document.getElementById('bubble_opacity').value;
                 const bubble = document.getElementById('live-preview-bubble');
-                bubble.style.backgroundColor = isDark ? `rgba(0,0,0,${opacity})` : `rgba(255,255,255,${opacity})`;
-                
                 const style = document.getElementById('break_style').value;
-                const textContainer = document.getElementById('preview-text-container');
-                const text3d = document.getElementById('preview-text-3d');
+                const isDark = isDarkMode;
+
+                // Bubble logic
+                const opacity = document.getElementById('bubble_opacity').value;
+                const size = document.getElementById('bubble_size').value;
+                const posX = document.getElementById('bubble_pos_x').value;
+                const posY = document.getElementById('bubble_pos_y').value;
+                const anim = document.getElementById('animation_style').value;
+                const previewScale = 0.25;
+
+                bubble.style.width = (size * previewScale) + "px";
+                bubble.style.height = (size * previewScale) + "px";
+                bubble.style.fontSize = (size * previewScale / 5) + "px";
+                bubble.style.backgroundColor = isDark ? `rgba(0,0,0,${opacity})` : `rgba(255,255,255,${opacity})`;
+                bubble.style.left = `calc(${posX}% - ${(size * previewScale) * (posX/100)}px)`;
+                bubble.style.top = `calc(${posY}% - ${(size * previewScale) * (posY/100)}px)`;
+
+                if (anim === 'pulse') {
+                    bubble.style.setProperty('--pulse-opacity-start', opacity);
+                    bubble.style.setProperty('--pulse-opacity-end', Math.max(0, opacity - 0.3));
+                    bubble.style.animation = `pulse 2s ease-in-out infinite`;
+                } else if (anim !== 'none') { bubble.style.animation = `${anim} 3s ease-in-out infinite`; }
+                else { bubble.style.animation = 'none'; }
                 
+                // Content logic
+                const text3d = document.getElementById('preview-text-3d');
+                const textContainer = document.getElementById('preview-text-container');
+                const bgImg = document.getElementById('live-preview-bg-img');
+                const bgVid = document.getElementById('live-preview-bg-vid');
+
                 if (style === 'text') {
                     textContainer.classList.remove('hidden');
+                    bgImg.classList.add('hidden'); bgVid.classList.add('hidden');
+                    
                     const isAdaptive = document.getElementById('adaptive_text_color').checked;
                     const baseColor = document.getElementById('text_color').value;
                     const finalColor = isAdaptive ? (isDark ? '#ffffff' : '#000000') : baseColor;
@@ -395,20 +409,20 @@
                     
                     if (document.getElementById('text_glow_enabled').checked) {
                         const glowColor = document.getElementById('text_glow_color').value;
-                        text3d.style.setProperty('--text-glow-filter', `drop-shadow(0 0 ${document.getElementById('text_glow').value}px ${glowColor})`);
+                        text3d.style.setProperty('--text-glow-filter', `drop-shadow(0 0 ${document.getElementById('text_glow').value / 2}px ${glowColor})`);
                     } else {
                         text3d.style.setProperty('--text-glow-filter', 'none');
                     }
                 } else {
                     textContainer.classList.add('hidden');
+                    updatePreview(currentMediaPath);
                 }
-            } catch (e) { console.warn("Preview Sync Error:", e); }
+            } catch (e) { console.warn("Preview Error:", e); }
         }
 
         function save() {
             const getVal = (id) => document.getElementById(id).value;
             const getCheck = (id) => document.getElementById(id).checked;
-            
             const settings = {
                 work_duration_secs: getVal('work_duration') * 60,
                 break_duration_secs: getVal('break_duration') * 60,
@@ -492,6 +506,7 @@
             } else if (data.action === "asset_synced") {
                 document.getElementById('asset-dot').className = 'status-dot dot-ready';
                 document.getElementById('asset-label').innerText = 'Cinematic Assets: Ready';
+                updatePreviewFromUI();
             } else if (data.action === "asset_progress") {
                 document.getElementById('asset-label').innerText = `Cinematic Assets: Syncing (${data.percentage}%)`;
             } else if (data.action === "theme_changed") {
@@ -528,16 +543,37 @@
         }
         function selectMedia() { window.chrome.webview.postMessage({ action: "select_media" }); }
         function checkUpdates() { window.chrome.webview.postMessage({ action: "check_updates" }); }
-        function startUpdate() { window.chrome.webview.postMessage({ action: "start_update" }); }
         function retrySync() { window.chrome.webview.postMessage({ action: "retry_sync" }); }
 
         function updatePreview(path) {
-            const vid = document.getElementById('live-preview-bg-vid');
-            const img = document.getElementById('live-preview-bg-img');
-            vid.classList.add('hidden'); img.classList.add('hidden');
-            const formattedPath = (path === "default.webm") ? "https://pausecat.app/assets/default.webm" : (path.startsWith('https://') ? path : 'https://pausecat.app/local/' + btoa(path));
-            if (path.endsWith('.webm') || path.endsWith('.mp4')) { vid.src = formattedPath; vid.classList.remove('hidden'); }
-            else { img.src = formattedPath; img.classList.remove('hidden'); }
+            try {
+                if (!path) return;
+                currentMediaPath = path;
+                
+                const mainVid = document.getElementById('live-preview-bg-vid');
+                const mainImg = document.getElementById('live-preview-bg-img');
+                const smallVid = document.getElementById('preview-video');
+                const smallImg = document.getElementById('preview-img');
+                const placeholder = document.getElementById('media-empty');
+
+                // Hide all initially
+                [mainVid, mainImg, smallVid, smallImg].forEach(el => { if(el) el.classList.add('hidden'); });
+                if (placeholder) placeholder.classList.add('hidden');
+
+                const formattedPath = (path === "default.webm") 
+                    ? "https://pausecat.app/assets/default.webm" 
+                    : (path.startsWith('https://') ? path : 'https://pausecat.app/local/' + btoa(path));
+                
+                const isVideo = path.toLowerCase().endsWith('.webm') || path.toLowerCase().endsWith('.mp4');
+
+                if (isVideo) {
+                    if (mainVid) { mainVid.src = formattedPath; mainVid.classList.remove('hidden'); mainVid.play().catch(()=>{}); }
+                    if (smallVid) { smallVid.src = formattedPath; smallVid.classList.remove('hidden'); smallVid.play().catch(()=>{}); }
+                } else {
+                    if (mainImg) { mainImg.src = formattedPath; mainImg.classList.remove('hidden'); }
+                    if (smallImg) { smallImg.src = formattedPath; smallImg.classList.remove('hidden'); }
+                }
+            } catch (e) { console.warn("Update Preview Error:", e); }
         }
 
         window.onload = () => { window.chrome.webview.postMessage({ action: "ready" }); };
