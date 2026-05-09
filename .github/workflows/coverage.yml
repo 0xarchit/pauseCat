@@ -3,6 +3,11 @@ name: Coverage
 on:
   push:
     branches: ["main"]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
 
 jobs:
   coverage:
@@ -21,15 +26,21 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate Coverage
+        id: generate
         run: |
           $out = cargo tarpaulin --out stdout
-          $percent = ($out | Select-String -Pattern "(\d+\.\d+)% coverage").Matches.Groups[1].Value
-          if (-not $percent) {
-              $percent = ($out | Select-String -Pattern "(\d+)% coverage").Matches.Groups[1].Value
+          $match = $out | Select-String -Pattern "(\d+(\.\d+)?)% coverage" | Select-Object -First 1
+          if ($match) {
+              $percent = $match.Matches[0].Groups[1].Value
+              echo "COVERAGE_PERCENT=$percent" >> $env:GITHUB_ENV
+              echo "parsed=true" >> $env:GITHUB_OUTPUT
+          } else {
+              Write-Warning "Could not parse coverage percentage from Tarpaulin output. Skipping badge update."
+              echo "parsed=false" >> $env:GITHUB_OUTPUT
           }
-          echo "COVERAGE_PERCENT=$percent" >> $env:GITHUB_ENV
 
       - name: Update README Badge
+        if: steps.generate.outputs.parsed == 'true'
         run: |
           $percent = $env:COVERAGE_PERCENT
           $readme = Get-Content README.md -Raw
@@ -37,6 +48,7 @@ jobs:
           Set-Content README.md $new_readme
 
       - name: Commit Badge Update
+        if: steps.generate.outputs.parsed == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
