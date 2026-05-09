@@ -50,6 +50,8 @@ where F: FnOnce(&str), P: FnOnce() -> Option<String> {
         if let Some(path) = pick_file_fn() {
             post_message(&format!("{{\"action\":\"media_selected\", \"path\":\"{}\"}}", path.replace('\\', "/")));
         }
+    } else if json.contains("\"action\":\"retry_sync\"") {
+        let _ = sender.send(AppEvent::RetryAssetSync);
     }
 }
 

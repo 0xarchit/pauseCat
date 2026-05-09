@@ -223,10 +223,12 @@ pub fn ensure_assets_sync(event_tx: Sender<AppEvent>) {
         log::info!("Downloading default.webm ({} bytes) from {}", asset.size, asset.browser_download_url);
         match client.get(&asset.browser_download_url).send() {
             Ok(mut response) => {
+                let total_size = response.content_length().unwrap_or(asset.size as u64);
                 match fs::File::create(&config_asset_path) {
                     Ok(mut file) => {
                         let mut buffer = [0; 8192];
                         let mut downloaded = 0;
+                        let mut last_percentage = 0;
                         loop {
                             match response.read(&mut buffer) {
                                 Ok(0) => break,
@@ -237,6 +239,14 @@ pub fn ensure_assets_sync(event_tx: Sender<AppEvent>) {
                                         return;
                                     }
                                     downloaded += n;
+                                    
+                                    if total_size > 0 {
+                                        let percentage = (downloaded as f32 / total_size as f32 * 100.0) as u32;
+                                        if percentage > last_percentage {
+                                            last_percentage = percentage;
+                                            let _ = event_tx.send(AppEvent::AssetDownloadProgress(percentage));
+                                        }
+                                    }
                                 }
                                 Err(e) => {
                                     log::error!("Failed to read response: {}", e);

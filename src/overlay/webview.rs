@@ -43,12 +43,13 @@ where F: FnOnce(&str) {
         };
         let messages_json = serde_json::to_string(&settings.break_messages).unwrap_or_else(|_| "[]".to_string());
         let init_msg = format!(
-            "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\", \"isDark\": {}, \"bubbleOpacity\": {}, \"bubbleSize\": {}, \"bubblePosX\": {}, \"bubblePosY\": {}, \"animationStyle\": \"{}\", \"breakMessages\": {}, \"randomizeMessages\": {}, \"showWorkStatus\": {}, \"workDurationSecs\": {}, \"breakStyle\": \"{}\", \"customText\": \"{}\", \"muteVideo\": {}, \"textAnimation\": \"{}\", \"textRotationX\": {}, \"textRotationY\": {}, \"textColor\": \"{}\", \"textOpacity\": {}}}",
+            "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\", \"isDark\": {}, \"bubbleOpacity\": {}, \"bubbleSize\": {}, \"bubblePosX\": {}, \"bubblePosY\": {}, \"animationStyle\": \"{}\", \"breakMessages\": {}, \"randomizeMessages\": {}, \"showWorkStatus\": {}, \"workDurationSecs\": {}, \"breakStyle\": \"{}\", \"customText\": \"{}\", \"videoVolume\": {}, \"textAnimation\": \"{}\", \"textRotationX\": {}, \"textRotationY\": {}, \"textColor\": \"{}\", \"textOpacity\": {}, \"textGlow\": {}, \"textDepth\": {}, \"adaptiveTextColor\": {}}}",
             settings.break_duration_secs, mode_str, final_media_path, crate::system::is_dark_mode(),
             settings.bubble_opacity, settings.bubble_size, settings.bubble_pos_x, settings.bubble_pos_y,
             settings.animation_style, messages_json, settings.randomize_messages, settings.show_work_duration_status, settings.work_duration_secs,
-            settings.break_style, settings.custom_text.replace("\"", "\\\""), settings.mute_video,
-            settings.text_animation, settings.text_rotation_x, settings.text_rotation_y, settings.text_color, settings.text_opacity
+            settings.break_style, settings.custom_text.replace("\"", "\\\""), settings.video_volume,
+            settings.text_animation, settings.text_rotation_x, settings.text_rotation_y, settings.text_color, settings.text_opacity,
+            settings.text_glow, settings.text_depth, settings.adaptive_text_color
         );
         post_message(&init_msg);
     }

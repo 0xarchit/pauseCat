@@ -201,13 +201,28 @@
 
         .status-footer {
             margin-top: 8px; padding: 0 4px;
-            display: flex; justify-content: space-between;
+            display: flex; justify-content: space-between; align-items: center;
             font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);
             opacity: 0.8;
         }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
         .dot-ready { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
         .dot-missing { background: #eab308; box-shadow: 0 0 8px #eab308; }
+        .dot-error { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+        .asset-progress-container {
+            width: 100px; height: 4px; background: var(--secondary-bg);
+            border-radius: 2px; overflow: hidden; margin-left: 8px;
+            display: inline-block; vertical-align: middle;
+        }
+        .asset-progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; }
+
+        .retry-btn {
+            background: none; border: 1px solid var(--accent); color: var(--accent);
+            padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;
+            margin-left: 8px; transition: all 0.2s;
+        }
+        .retry-btn:hover { background: var(--accent); color: white; }
 
         .media-preview-area { position: relative; margin-top: 10px; }
         .media-preview {
@@ -612,6 +627,16 @@
             window.chrome.webview.postMessage({ action: "check_updates" });
         }
 
+        function retrySync() {
+            const assetDot = document.getElementById('asset-dot');
+            const assetLabel = document.getElementById('asset-label');
+            assetDot.className = 'status-dot dot-missing';
+            assetLabel.innerText = 'Cinematic Assets: Retrying...';
+            const retryBtn = document.getElementById('asset-retry-btn');
+            if (retryBtn) retryBtn.classList.add('hidden');
+            window.chrome.webview.postMessage({ action: "retry_sync" });
+        }
+
         function startUpdate() {
             document.getElementById('update-actions').classList.add('hidden');
             document.getElementById('update-progress-section').classList.remove('hidden');
@@ -636,6 +661,29 @@
             if (msg && !currentBreakMessages.includes(msg)) {
                 currentBreakMessages.push(msg); input.value = ""; renderList('break-messages-tags', currentBreakMessages, 'messages');
             }
+        }
+
+        function generate3DShadow(color, depth) {
+            let shadows = [];
+            for (let i = 1; i <= depth; i++) {
+                shadows.push(`${i}px ${i}px 0px ${adjustColor(color, -i * 5)}`);
+            }
+            shadows.push(`0 ${depth + 1}px 10px rgba(0,0,0,0.4)`);
+            return shadows.join(', ');
+        }
+
+        function adjustColor(hex, amount) {
+            if (hex === 'transparent' || hex === 'none') return hex;
+            let usePound = false;
+            if (hex[0] == "#") { hex = hex.slice(1); usePound = true; }
+            let num = parseInt(hex, 16);
+            let r = (num >> 16) + amount;
+            if (r > 255) r = 255; else if (r < 0) r = 0;
+            let b = ((num >> 8) & 0x00FF) + amount;
+            if (b > 255) b = 255; else if (b < 0) b = 0;
+            let g = (num & 0x0000FF) + amount;
+            if (g > 255) g = 255; else if (g < 0) g = 0;
+            return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
         }
 
         function renderList(containerId, list, type) {
@@ -862,7 +910,39 @@
                 const assetLabel = document.getElementById('asset-label');
                 assetDot.className = 'status-dot dot-ready';
                 assetLabel.innerText = 'Cinematic Assets: Ready';
+                const container = document.getElementById('asset-status');
+                const oldProgress = container.querySelector('.asset-progress-container');
+                if (oldProgress) oldProgress.remove();
+                const oldRetry = document.getElementById('asset-retry-btn');
+                if (oldRetry) oldRetry.remove();
                 updatePreview(currentMediaPath);
+            } else if (event.data.action === "asset_progress") {
+                const container = document.getElementById('asset-status');
+                let progressContainer = container.querySelector('.asset-progress-container');
+                if (!progressContainer) {
+                    progressContainer = document.createElement('div');
+                    progressContainer.className = 'asset-progress-container';
+                    progressContainer.innerHTML = '<div class="asset-progress-bar"></div>';
+                    container.appendChild(progressContainer);
+                }
+                const bar = progressContainer.querySelector('.asset-progress-bar');
+                bar.style.width = event.data.percentage + "%";
+                document.getElementById('asset-label').innerText = `Cinematic Assets: Syncing (${event.data.percentage}%)`;
+            } else if (event.data.action === "asset_error") {
+                const assetDot = document.getElementById('asset-dot');
+                const assetLabel = document.getElementById('asset-label');
+                assetDot.className = 'status-dot dot-error';
+                assetLabel.innerText = 'Cinematic Assets: Failed';
+                
+                const container = document.getElementById('asset-status');
+                if (!document.getElementById('asset-retry-btn')) {
+                    const retryBtn = document.createElement('button');
+                    retryBtn.id = 'asset-retry-btn';
+                    retryBtn.className = 'retry-btn';
+                    retryBtn.innerText = 'Retry';
+                    retryBtn.onclick = retrySync;
+                    container.appendChild(retryBtn);
+                }
             }
         });
 
