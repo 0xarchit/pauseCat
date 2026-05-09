@@ -13,11 +13,22 @@ lazy_static::lazy_static! {
 }
 
 pub fn get_assets_path() -> PathBuf {
+    // 1. Check Config Dir (Lazy-loaded assets)
+    let mut config_path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+    config_path.push("PauseCat");
+    config_path.push("assets");
+    if config_path.exists() {
+        return config_path;
+    }
+
+    // 2. Check near EXE (Bundled assets)
     if let Ok(mut path) = std::env::current_exe() {
         path.pop();
         path.push("assets");
         if path.exists() { return path; }
     }
+    
+    // 3. Fallback to CWD
     let mut path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     path.push("assets");
     path

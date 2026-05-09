@@ -163,8 +163,7 @@ impl SettingsWindow {
                                 let settings_h = GetPropW(hwnd, w!("Settings"));
                                 let settings = &*(settings_h.0 as *const Settings);
                                 
-                                let mut asset_path = Settings::get_config_dir();
-                                asset_path.push("assets");
+                                let mut asset_path = webview_env::get_assets_path();
                                 asset_path.push("default.webm");
                                 let asset_ready = asset_path.exists() && asset_path.metadata().map(|m| m.len() > 0).unwrap_or(false);
 
@@ -186,7 +185,7 @@ impl SettingsWindow {
         Ok(())
     }
 
-    fn post_web_message(&self, msg: &str) {
+    pub fn post_web_message(&self, msg: &str) {
         if let Ok(lock) = CONTROLLERS.lock() {
             if let Some(safe_controller) = lock.get(&(self.hwnd.0 as isize)) {
                 if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {

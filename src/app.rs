@@ -161,8 +161,9 @@ impl App {
             }
             AppEvent::AssetDownloaded(name) => {
                 log::info!("Asset downloaded: {}", name);
-                // If the overlay is currently showing the 3D text fallback, we could trigger a reload,
-                // but for now, we'll just let the next break use the video.
+                if let Some(ref mut win) = self.settings_window {
+                    win.post_web_message("{\"action\":\"asset_synced\"}");
+                }
             }
             AppEvent::AssetDownloadError(err) => {
                 log::error!("Asset download error: {}", err);

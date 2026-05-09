@@ -164,29 +164,40 @@ pub fn cleanup_updates() {
 
 pub fn ensure_assets_sync(event_tx: Sender<AppEvent>) {
     thread::spawn(move || {
-        let mut asset_path = Settings::get_config_dir();
-        asset_path.push("assets");
-        if !asset_path.exists() {
-            let _ = fs::create_dir_all(&asset_path);
+        log::info!("Starting asset sync check...");
+        
+        // 1. Determine the target path for the download (Config Dir)
+        let mut config_asset_path = Settings::get_config_dir();
+        config_asset_path.push("assets");
+        if !config_asset_path.exists() {
+            let _ = fs::create_dir_all(&config_asset_path);
         }
-        asset_path.push("default.webm");
+        config_asset_path.push("default.webm");
 
-        if asset_path.exists() {
+        // 2. Check all preferred locations via the central path resolver
+        let mut final_path = crate::overlay::webview_env::get_assets_path();
+        final_path.push("default.webm");
+
+        if final_path.exists() && final_path.metadata().map(|m| m.len() > 0).unwrap_or(false) {
+            log::info!("Asset already exists and is valid: {:?}", final_path);
             return;
         }
 
+        log::info!("Asset missing or invalid, attempting download to {:?}", config_asset_path);
+
         let client = match reqwest::blocking::Client::builder()
             .user_agent("PauseCat-Asset-Syncer-v1")
-            .timeout(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(60))
             .build() {
                 Ok(c) => c,
                 Err(e) => {
+                    log::error!("Failed to create HTTP client: {}", e);
                     let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
                     return;
                 }
             };
 
-        // We fetch the latest release to find the browser_download_url for default.webm
+        log::info!("Fetching latest release info from {}", GITHUB_API_URL);
         let release: GithubRelease = match client.get(GITHUB_API_URL)
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
@@ -194,6 +205,7 @@ pub fn ensure_assets_sync(event_tx: Sender<AppEvent>) {
             .and_then(|r| r.json()) {
                 Ok(r) => r,
                 Err(e) => {
+                    log::error!("Failed to fetch release info: {}", e);
                     let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
                     return;
                 }
@@ -202,39 +214,48 @@ pub fn ensure_assets_sync(event_tx: Sender<AppEvent>) {
         let asset = match release.assets.iter().find(|a| a.name == "default.webm") {
             Some(a) => a,
             None => {
+                log::warn!("default.webm not found in latest release assets");
                 let _ = event_tx.send(AppEvent::AssetDownloadError("default.webm not found in release assets".to_string()));
                 return;
             }
         };
 
+        log::info!("Downloading default.webm ({} bytes) from {}", asset.size, asset.browser_download_url);
         match client.get(&asset.browser_download_url).send() {
             Ok(mut response) => {
-                match fs::File::create(&asset_path) {
+                match fs::File::create(&config_asset_path) {
                     Ok(mut file) => {
                         let mut buffer = [0; 8192];
+                        let mut downloaded = 0;
                         loop {
                             match response.read(&mut buffer) {
                                 Ok(0) => break,
                                 Ok(n) => {
                                     if let Err(e) = std::io::Write::write_all(&mut file, &buffer[..n]) {
+                                        log::error!("Failed to write to file: {}", e);
                                         let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
                                         return;
                                     }
+                                    downloaded += n;
                                 }
                                 Err(e) => {
+                                    log::error!("Failed to read response: {}", e);
                                     let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
                                     return;
                                 }
                             }
                         }
+                        log::info!("Successfully downloaded {} bytes to {:?}", downloaded, config_asset_path);
                         let _ = event_tx.send(AppEvent::AssetDownloaded("default.webm".to_string()));
                     }
                     Err(e) => {
+                        log::error!("Failed to create file: {}", e);
                         let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
                     }
                 }
             }
             Err(e) => {
+                log::error!("Failed to start download: {}", e);
                 let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
             }
         }

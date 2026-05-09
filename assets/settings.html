@@ -817,6 +817,12 @@
                 btn.disabled = false; btn.innerText = "Check for Updates";
                 hideUpdateModal();
                 showNotification("Update Error", event.data.error);
+            } else if (event.data.action === "asset_synced") {
+                const assetDot = document.getElementById('asset-dot');
+                const assetLabel = document.getElementById('asset-label');
+                assetDot.className = 'status-dot dot-ready';
+                assetLabel.innerText = 'Cinematic Assets: Ready';
+                updatePreview(currentMediaPath);
             }
         });
 
