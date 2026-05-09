@@ -1,4 +1,6 @@
 use std::fs;
+use std::thread;
+use std::io::Read;
 use serde::{Deserialize, Serialize};
 use semver::Version;
 use crate::settings::Settings;
