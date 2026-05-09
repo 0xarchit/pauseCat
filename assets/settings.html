@@ -167,10 +167,11 @@
             color: var(--text-color, #fff);
             text-transform: uppercase; 
             transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg));
-            text-shadow: 0 1px 0 #ccc, 0 2px 0 #bbb, 0 3px 2px rgba(0,0,0,0.3);
+            text-shadow: var(--text-3d-shadow);
             opacity: var(--text-opacity, 0.2); 
             animation: previewFloat 5s ease-in-out infinite;
             text-align: center;
+            filter: drop-shadow(0 0 var(--text-glow-radius, 10px) var(--text-color, #fff));
         }
         @keyframes previewFloat {
             0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) translateZ(0); }
@@ -460,6 +461,17 @@
 
                 <div class="setting-row">
                     <div class="setting-info">
+                        <span class="setting-label">Adaptive Text Color</span>
+                        <span class="setting-description">Auto-contrast based on theme</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="adaptive_text_color" onchange="updatePreviewFromUI()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
                         <span class="setting-label">3D Rotation X</span>
                         <span class="setting-description">Tilt forward/back (deg)</span>
                     </div>
@@ -489,18 +501,31 @@
                     </div>
                     <input type="range" id="text_opacity" min="0.05" max="1.0" step="0.05" oninput="updatePreviewFromUI()">
                 </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-label">Text Glow</span>
+                        <span class="setting-description">Neon Bloom intensity</span>
+                    </div>
+                    <input type="range" id="text_glow" min="0" max="50" step="1" oninput="updatePreviewFromUI()">
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-label">Text Depth</span>
+                        <span class="setting-description">3D Extrusion height</span>
+                    </div>
+                    <input type="range" id="text_depth" min="1" max="20" step="1" oninput="updatePreviewFromUI()">
+                </div>
             </div>
             
             <div id="media-style-options">
                 <div class="setting-row" style="margin-top: 16px;">
                     <div class="setting-info">
-                        <span class="setting-label">Mute Video</span>
-                        <span class="setting-description">Disable sound for break videos</span>
+                        <span class="setting-label">Video Volume</span>
+                        <span class="setting-description">Loudness of break videos</span>
                     </div>
-                    <label class="switch">
-                        <input type="checkbox" id="mute_video">
-                        <span class="slider"></span>
-                    </label>
+                    <input type="range" id="video_volume" min="0" max="1" step="0.01" oninput="updatePreviewFromUI()">
                 </div>
 
                 <div class="setting-info" style="margin-top: 16px;">
@@ -746,13 +771,24 @@
 
             if (breakStyle === 'text') {
                 textContainer.classList.remove('hidden');
+                
+                // Adaptive Color Logic for Preview
+                let finalColor = textColor;
+                if (document.getElementById('adaptive_text_color').checked) {
+                    finalColor = isDarkMode ? '#ffffff' : '#000000';
+                }
+
                 text3d.innerText = customText;
                 
                 // Apply advanced preview styles
-                text3d.style.setProperty('--text-color', textColor);
+                text3d.style.setProperty('--text-color', finalColor);
                 text3d.style.setProperty('--text-opacity', textOpacity);
                 text3d.style.setProperty('--rot-x', rotX + 'deg');
                 text3d.style.setProperty('--rot-y', rotY + 'deg');
+                
+                // Cinematic FX: 3D Extrusion & Glow
+                text3d.style.setProperty('--text-3d-shadow', generate3DShadow(finalColor, parseInt(document.getElementById('text_depth').value)));
+                text3d.style.setProperty('--text-glow-radius', document.getElementById('text_glow').value + 'px');
 
                 if (textAnim === 'float') text3d.style.animation = 'previewFloat 5s ease-in-out infinite';
                 else if (textAnim === 'rotate') text3d.style.animation = 'previewRotate 10s linear infinite';
@@ -820,12 +856,15 @@
                 animation_style: document.getElementById('animation_style').value,
                 break_style: document.getElementById('break_style').value,
                 custom_text: document.getElementById('custom_text').value || "PAUSE",
-                mute_video: document.getElementById('mute_video').checked,
+                video_volume: parseFloat(document.getElementById('video_volume').value),
                 text_animation: document.getElementById('text_animation').value,
                 text_rotation_x: parseInt(document.getElementById('text_rotation_x').value),
                 text_rotation_y: parseInt(document.getElementById('text_rotation_y').value),
                 text_color: document.getElementById('text_color').value,
-                text_opacity: parseFloat(document.getElementById('text_opacity').value)
+                text_opacity: parseFloat(document.getElementById('text_opacity').value),
+                text_glow: parseFloat(document.getElementById('text_glow').value),
+                text_depth: parseInt(document.getElementById('text_depth').value),
+                adaptive_text_color: document.getElementById('adaptive_text_color').checked
             };
             window.chrome.webview.postMessage({ action: "save", settings: settings });
         }
@@ -846,12 +885,15 @@
                 document.getElementById('animation_style').value = s.animation_style || "float";
                 document.getElementById('break_style').value = s.break_style || "media";
                 document.getElementById('custom_text').value = s.custom_text || "PAUSE";
-                document.getElementById('mute_video').checked = s.mute_video !== false;
+                document.getElementById('video_volume').value = s.video_volume ?? 0.0;
                 document.getElementById('text_animation').value = s.text_animation || "float";
                 document.getElementById('text_rotation_x').value = s.text_rotation_x ?? 20;
                 document.getElementById('text_rotation_y').value = s.text_rotation_y ?? -20;
                 document.getElementById('text_color').value = s.text_color || "#ffffff";
                 document.getElementById('text_opacity').value = s.text_opacity ?? 0.15;
+                document.getElementById('text_glow').value = s.text_glow ?? 10;
+                document.getElementById('text_depth').value = s.text_depth ?? 5;
+                document.getElementById('adaptive_text_color').checked = s.adaptive_text_color !== false;
                 
                 // Status Footer Updates
                 document.getElementById('app-version').innerText = `v${event.data.version}`;
