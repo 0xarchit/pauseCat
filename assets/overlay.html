@@ -276,6 +276,19 @@
                     bubble.style.animation = `${event.data.animationStyle} 6s ease-in-out infinite`;
                 }
 
+                // Custom 3D Text
+                const fallback = document.getElementById('fallback-ui');
+                const fallbackText = fallback.querySelector('.fallback-text-3d');
+                if (event.data.customText) {
+                    fallbackText.innerText = event.data.customText;
+                }
+
+                if (event.data.breakStyle === 'text') {
+                    fallback.classList.remove('hidden');
+                } else {
+                    fallback.classList.add('hidden');
+                }
+
                 // Break Messages
                 if (event.data.breakMessages && event.data.breakMessages.length > 0) {
                     breakMessages = event.data.breakMessages;
@@ -302,10 +315,9 @@
                     }
                 }
                 
-                if (event.data.mediaPath) {
+                if (event.data.mediaPath && event.data.breakStyle !== 'text') {
                     const img = document.getElementById('bg-image');
                     const video = document.getElementById('bg-video');
-                    const fallback = document.getElementById('fallback-ui');
                     const ext = event.data.mediaPath.split('.').pop().toLowerCase();
 
                     video.onerror = () => {

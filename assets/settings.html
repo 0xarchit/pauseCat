@@ -352,21 +352,46 @@
                     </select>
                 </div>
             </div>
-            
-            <div class="setting-info" style="margin-top: 16px;">
-                <span class="setting-label">Background Media</span>
-                <span class="setting-description">Select your own vibe</span>
-            </div>
-            <div class="media-preview-area">
-                <div class="media-preview" onclick="selectMedia()">
-                    <div id="media-empty" class="media-placeholder">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        <span>Change Background</span>
-                    </div>
-                    <img id="preview-img" class="hidden">
-                    <video id="preview-video" class="hidden" muted loop></video>
+
+            <div class="setting-row" style="margin-top: 16px;">
+                <div class="setting-info">
+                    <span class="setting-label">Break Style</span>
+                    <span class="setting-description">Visuals during break</span>
                 </div>
-                <button id="reset-btn" class="reset-media hidden" onclick="resetToDefault(event)">Reset to Default</button>
+                <div class="control">
+                    <select id="break_style" onchange="toggleBreakStyle()">
+                        <option value="media">Cinematic Media</option>
+                        <option value="text">3D Dynamic Text</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="text-style-options" class="hidden" style="margin-top: 16px;">
+                <div class="setting-info">
+                    <span class="setting-label">Custom Break Text</span>
+                    <span class="setting-description">Displays in 3D (Max 20 chars)</span>
+                </div>
+                <div class="add-row">
+                    <input type="text" id="custom_text" maxlength="20" placeholder="e.g. PAUSE" oninput="updatePreviewFromUI()">
+                </div>
+            </div>
+            
+            <div id="media-style-options">
+                <div class="setting-info" style="margin-top: 16px;">
+                    <span class="setting-label">Background Media</span>
+                    <span class="setting-description">Select your own vibe</span>
+                </div>
+                <div class="media-preview-area">
+                    <div class="media-preview" onclick="selectMedia()">
+                        <div id="media-empty" class="media-placeholder">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            <span>Change Background</span>
+                        </div>
+                        <img id="preview-img" class="hidden">
+                        <video id="preview-video" class="hidden" muted loop></video>
+                    </div>
+                    <button id="reset-btn" class="reset-media hidden" onclick="resetToDefault(event)">Reset to Default</button>
+                </div>
             </div>
         </div>
 
@@ -552,6 +577,19 @@
             } else { bubble.style.animation = 'none'; }
         }
 
+        function toggleBreakStyle() {
+            const style = document.getElementById('break_style').value;
+            const textOptions = document.getElementById('text-style-options');
+            const mediaOptions = document.getElementById('media-style-options');
+            if (style === 'text') {
+                textOptions.classList.remove('hidden');
+                mediaOptions.classList.add('hidden');
+            } else {
+                textOptions.classList.add('hidden');
+                mediaOptions.classList.remove('hidden');
+            }
+        }
+
         function save() {
             const workDuration = parseInt(document.getElementById('work_duration').value);
             const breakDuration = parseInt(document.getElementById('break_duration').value);
@@ -580,7 +618,9 @@
                 bubble_size: parseInt(document.getElementById('bubble_size').value),
                 bubble_pos_x: parseInt(document.getElementById('bubble_pos_x').value),
                 bubble_pos_y: parseInt(document.getElementById('bubble_pos_y').value),
-                animation_style: document.getElementById('animation_style').value
+                animation_style: document.getElementById('animation_style').value,
+                break_style: document.getElementById('break_style').value,
+                custom_text: document.getElementById('custom_text').value || "PAUSE"
             };
             window.chrome.webview.postMessage({ action: "save", settings: settings });
         }
@@ -599,6 +639,11 @@
                 document.getElementById('bubble_pos_x').value = s.bubble_pos_x || 5;
                 document.getElementById('bubble_pos_y').value = s.bubble_pos_y || 5;
                 document.getElementById('animation_style').value = s.animation_style || "float";
+                document.getElementById('break_style').value = s.break_style || "media";
+                document.getElementById('custom_text').value = s.custom_text || "PAUSE";
+                
+                toggleBreakStyle();
+
                 if (s.overlay_animation) updatePreview(s.overlay_animation);
                 currentWhitelist = s.whitelist || []; renderList('whitelist-tags', currentWhitelist, 'whitelist');
                 currentBreakMessages = s.break_messages || ["Breathe In..."]; renderList('break-messages-tags', currentBreakMessages, 'messages');

@@ -38,6 +38,8 @@ pub struct Settings {
     pub bubble_pos_x: i32,
     pub bubble_pos_y: i32,
     pub animation_style: String,
+    pub break_style: String, // "media" or "text"
+    pub custom_text: String,
 }
 
 impl Default for Settings {
@@ -62,6 +64,8 @@ impl Default for Settings {
             bubble_pos_x: 5,
             bubble_pos_y: 5,
             animation_style: "float".to_string(),
+            break_style: "media".to_string(),
+            custom_text: "PAUSE".to_string(),
         }
     }
 }

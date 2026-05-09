@@ -43,10 +43,11 @@ where F: FnOnce(&str) {
         };
         let messages_json = serde_json::to_string(&settings.break_messages).unwrap_or_else(|_| "[]".to_string());
         let init_msg = format!(
-            "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\", \"isDark\": {}, \"bubbleOpacity\": {}, \"bubbleSize\": {}, \"bubblePosX\": {}, \"bubblePosY\": {}, \"animationStyle\": \"{}\", \"breakMessages\": {}, \"randomizeMessages\": {}, \"showWorkStatus\": {}, \"workDurationSecs\": {}}}",
+            "{{\"action\":\"init\", \"duration\": {}, \"mode\": \"{}\", \"mediaPath\": \"{}\", \"isDark\": {}, \"bubbleOpacity\": {}, \"bubbleSize\": {}, \"bubblePosX\": {}, \"bubblePosY\": {}, \"animationStyle\": \"{}\", \"breakMessages\": {}, \"randomizeMessages\": {}, \"showWorkStatus\": {}, \"workDurationSecs\": {}, \"breakStyle\": \"{}\", \"customText\": \"{}\"}}",
             settings.break_duration_secs, mode_str, final_media_path, crate::system::is_dark_mode(),
             settings.bubble_opacity, settings.bubble_size, settings.bubble_pos_x, settings.bubble_pos_y,
-            settings.animation_style, messages_json, settings.randomize_messages, settings.show_work_duration_status, settings.work_duration_secs
+            settings.animation_style, messages_json, settings.randomize_messages, settings.show_work_duration_status, settings.work_duration_secs,
+            settings.break_style, settings.custom_text.replace("\"", "\\\"")
         );
         post_message(&init_msg);
     }
