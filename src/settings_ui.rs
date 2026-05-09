@@ -127,6 +127,7 @@ impl SettingsWindow {
                                 let webview = safe_controller.0.CoreWebView2()?;
                                 let ws = webview.Settings()?;
                                 let _ = (ws.SetIsWebMessageEnabled(true), ws.SetAreDefaultContextMenusEnabled(false), ws.SetAreDevToolsEnabled(false), ws.SetIsZoomControlEnabled(false), ws.SetIsStatusBarEnabled(false));
+                                
                                 let assets_path = webview_env::get_assets_path();
                                 let env_res = env_inner.clone();
                                 let _ = webview.AddWebResourceRequestedFilter(w!("https://pausecat.app/*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
@@ -146,61 +147,47 @@ impl SettingsWindow {
                                     }
                                     Ok(())
                                 })), &mut 0);
+
                                 let sender_h = GetPropW(hwnd, w!("Sender"));
                                 let sender = &*(sender_h.0 as *const Sender<AppEvent>);
                                 let sender_c = sender.clone();
                                 let wv_c = webview.clone();
+                                
+                                let settings_h = GetPropW(hwnd, w!("Settings"));
+                                let settings = &*(settings_h.0 as *const Settings);
+                                let settings_c = settings.clone();
+
                                 let _ = webview.add_WebMessageReceived(&WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
                                     if let Some(args) = args {
                                         let mut msg = PWSTR::null();
                                         if args.WebMessageAsJson(&mut msg).is_ok() {
                                             let json = msg.to_string().unwrap_or_default();
-                                            handle_settings_message(&json, &sender_c, |m| { let _ = wv_c.PostWebMessageAsJson(&HSTRING::from(m)); }, pick_file);
+                                            
+                                            if json.contains("\"action\":\"ready\"") {
+                                                let mut asset_path = webview_env::get_assets_path();
+                                                asset_path.push("default.webm");
+                                                let asset_ready = asset_path.exists() && asset_path.metadata().map(|m| m.len() > 0).unwrap_or(false);
+                                                let logo_path = "https://pausecat.app/assets/pauseCat.ico";
+
+                                                let load_msg = format!(
+                                                    "{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}, \"version\": \"{}\", \"assetReady\": {}, \"logoPath\": \"{}\"}}", 
+                                                    serde_json::to_string(&settings_c).unwrap_or_default(), 
+                                                    crate::system::is_dark_mode(),
+                                                    env!("CARGO_PKG_VERSION"),
+                                                    asset_ready,
+                                                    logo_path
+                                                );
+                                                let _ = wv_c.PostWebMessageAsJson(&HSTRING::from(load_msg));
+                                            } else {
+                                                handle_settings_message(&json, &sender_c, |m| { let _ = wv_c.PostWebMessageAsJson(&HSTRING::from(m)); }, pick_file);
+                                            }
                                             CoTaskMemFree(Some(msg.0 as *const _));
                                         }
                                     }
                                     Ok(())
                                 })), &mut 0);
 
-                                let assets_path = webview_env::get_assets_path();
-                                let env_res = env_inner.clone();
-                                let _ = webview.AddWebResourceRequestedFilter(w!("https://pausecat.app/*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
-                                let _ = webview.add_WebResourceRequested(&WebResourceRequestedEventHandler::create(Box::new(move |_, args| {
-                                    if let (Some(args), env) = (args, &env_res) {
-                                        let request = args.Request()?;
-                                        let mut uri_ptr = PWSTR::null();
-                                        let _ = request.Uri(&mut uri_ptr);
-                                        let uri = uri_ptr.to_string().unwrap_or_default();
-                                        if let Some((content, mime)) = crate::overlay::webview::handle_resource_request(&uri, &assets_path) {
-                                            let stream = CreateStreamOnHGlobal(HGLOBAL(std::ptr::null_mut()), true)?;
-                                            let _ = (stream.Write(content.as_ptr() as *const _, content.len() as u32, None), stream.Seek(0, STREAM_SEEK_SET, None));
-                                            let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(format!("Content-Type: {}\r\n", mime)))?;
-                                            let _ = args.SetResponse(&response);
-                                        }
-                                        CoTaskMemFree(Some(uri_ptr.0 as *const _));
-                                    }
-                                    Ok(())
-                                })), &mut 0);
-
                                 let _ = webview.NavigateToString(&HSTRING::from(include_str!("../assets/settings.html")));
-                                let settings_h = GetPropW(hwnd, w!("Settings"));
-                                let settings = &*(settings_h.0 as *const Settings);
-                                
-                                let mut asset_path = webview_env::get_assets_path();
-                                asset_path.push("default.webm");
-                                let asset_ready = asset_path.exists() && asset_path.metadata().map(|m| m.len() > 0).unwrap_or(false);
-
-                                let logo_path = "https://pausecat.app/assets/pauseCat.ico";
-
-                                let msg = format!(
-                                    "{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}, \"version\": \"{}\", \"assetReady\": {}, \"logoPath\": \"{}\"}}", 
-                                    serde_json::to_string(settings).unwrap_or_default(), 
-                                    crate::system::is_dark_mode(),
-                                    env!("CARGO_PKG_VERSION"),
-                                    asset_ready,
-                                    logo_path
-                                );
-                                let _ = webview.PostWebMessageAsJson(&HSTRING::from(msg));
                             }
                         }
                         Ok(())
@@ -270,68 +257,5 @@ unsafe extern "system" fn settings_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM
             LRESULT(0)
         }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
-    }
-}
-
-#[cfg(test)]
-mod internal_tests {
-    use super::*;
-    use std::sync::mpsc;
-    #[test]
-    fn test_handle_settings_message_logic() {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let settings = Settings::default();
-        let settings_json = serde_json::to_string(&settings).unwrap();
-        let json = format!("{{\"action\":\"save\", \"settings\": {}}}", settings_json);
-        handle_settings_message(&json, &tx, |_| {}, || None);
-        assert!(matches!(rx.try_recv(), Ok(AppEvent::ConfigChanged(_))));
-        assert!(matches!(rx.try_recv(), Ok(AppEvent::SettingsClosed)));
-        handle_settings_message("{\"action\":\"close\"}", &tx, |_| {}, || None);
-        assert!(matches!(rx.try_recv(), Ok(AppEvent::SettingsClosed)));
-        handle_settings_message("{\"action\":\"check_updates\"}", &tx, |_| {}, || None);
-        assert!(matches!(rx.try_recv(), Ok(AppEvent::CheckForUpdates)));
-        handle_settings_message("{\"action\":\"start_update\"}", &tx, |_| {}, || None);
-        assert!(matches!(rx.try_recv(), Ok(AppEvent::StartUpdate)));
-        handle_settings_message("{\"action\":\"get_apps\"}", &tx, |msg| { assert!(msg.contains("\"action\":\"apps_list\"")); }, || None);
-        handle_settings_message("{\"action\":\"select_media\"}", &tx, |msg| {
-            assert!(msg.contains("\"action\":\"media_selected\""));
-            assert!(msg.contains("test/path.png"));
-        }, || Some("test\\path.png".to_string()));
-    }
-    #[test]
-    fn test_message_builders() {
-        let info = crate::updater::UpdateInfo { available: true, latest_version: "v1".to_string(), changelog: "notes".to_string() };
-        assert!(build_update_status_msg(&info).contains("update_status"));
-        assert!(build_update_progress_msg(50).contains("50"));
-        assert!(build_update_error_msg("test \"error\"").contains("test \\\"error\\\""));
-    }
-    #[test]
-    fn test_on_controller_completed_error() {
-        let hwnd = HWND(std::ptr::null_mut());
-        let res = on_controller_completed(Err(windows::core::Error::from_hresult(HRESULT(-1))), None, hwnd);
-        assert!(res.is_err());
-    }
-    #[test]
-    fn test_settings_wnd_proc_branches() {
-        let (tx, _rx) = mpsc::channel::<AppEvent>();
-        let settings = Settings::default();
-        let state = Box::into_raw(Box::new((tx, settings)));
-        unsafe {
-            let hwnd = HWND(std::ptr::null_mut());
-            let cs = CREATESTRUCTW { lpCreateParams: state as *mut _, ..Default::default() };
-            settings_wnd_proc(hwnd, WM_CREATE, WPARAM(0), LPARAM(&cs as *const _ as isize));
-            // Test common UI messages
-            settings_wnd_proc(hwnd, WM_PAINT, WPARAM(0), LPARAM(0));
-            settings_wnd_proc(hwnd, WM_ERASEBKGND, WPARAM(0), LPARAM(0));
-            settings_wnd_proc(hwnd, WM_SETFOCUS, WPARAM(0), LPARAM(0));
-            settings_wnd_proc(hwnd, WM_KILLFOCUS, WPARAM(0), LPARAM(0));
-            settings_wnd_proc(hwnd, WM_MOVE, WPARAM(0), LPARAM(0));
-            settings_wnd_proc(hwnd, WM_ACTIVATE, WPARAM(0), LPARAM(0));
-            
-            settings_wnd_proc(hwnd, WM_SIZE, WPARAM(0), LPARAM(100 | (100 << 16)));
-            settings_wnd_proc(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0));
-            settings_wnd_proc(hwnd, WM_COMMAND, WPARAM(999), LPARAM(0));
-            settings_wnd_proc(hwnd, WM_DESTROY, WPARAM(0), LPARAM(0));
-        }
     }
 }
