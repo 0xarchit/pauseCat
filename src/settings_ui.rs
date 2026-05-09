@@ -162,7 +162,19 @@ impl SettingsWindow {
                                 let _ = webview.NavigateToString(&HSTRING::from(include_str!("../assets/settings.html")));
                                 let settings_h = GetPropW(hwnd, w!("Settings"));
                                 let settings = &*(settings_h.0 as *const Settings);
-                                let msg = format!("{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}}}", serde_json::to_string(settings).unwrap_or_default(), crate::system::is_dark_mode());
+                                
+                                let mut asset_path = Settings::get_config_dir();
+                                asset_path.push("assets");
+                                asset_path.push("default.webm");
+                                let asset_ready = asset_path.exists();
+
+                                let msg = format!(
+                                    "{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}, \"version\": \"{}\", \"assetReady\": {}}}", 
+                                    serde_json::to_string(settings).unwrap_or_default(), 
+                                    crate::system::is_dark_mode(),
+                                    env!("CARGO_PKG_VERSION"),
+                                    asset_ready
+                                );
                                 let _ = webview.PostWebMessageAsJson(&HSTRING::from(msg));
                             }
                         }

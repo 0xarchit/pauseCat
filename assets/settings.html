@@ -153,8 +153,26 @@
             width: 100%; height: 160px; background: #000;
             border-radius: 10px; position: relative; overflow: hidden;
             margin-bottom: 20px; border: 1px solid var(--border); flex-shrink: 0;
+            perspective: 500px;
         }
         .preview-bg { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; }
+        
+        .preview-text-3d-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            pointer-events: none; z-index: 1;
+        }
+        .preview-text-3d {
+            font-size: 3rem; font-weight: 900; color: #fff;
+            text-transform: uppercase; transform: rotateX(20deg) rotateY(-20deg);
+            text-shadow: 0 1px 0 #ccc, 0 2px 0 #bbb, 0 3px 2px rgba(0,0,0,0.3);
+            opacity: 0.2; animation: previewFloat 5s ease-in-out infinite;
+        }
+        @keyframes previewFloat {
+            0%, 100% { transform: rotateX(20deg) rotateY(-20deg) translateZ(0); }
+            50% { transform: rotateX(25deg) rotateY(-15deg) translateZ(20px); }
+        }
+
         .preview-bubble {
             position: absolute; background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -162,8 +180,18 @@
             display: flex; justify-content: center; align-items: center;
             color: white; font-weight: 700; pointer-events: none;
             box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
+            transition: all 0.2s ease; z-index: 2;
         }
+
+        .status-footer {
+            margin-top: 8px; padding: 0 4px;
+            display: flex; justify-content: space-between;
+            font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);
+            opacity: 0.8;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .dot-ready { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .dot-missing { background: #eab308; box-shadow: 0 0 8px #eab308; }
 
         .media-preview-area { position: relative; margin-top: 10px; }
         .media-preview {
@@ -269,7 +297,17 @@
         <div class="preview-container">
             <img id="live-preview-bg-img" class="preview-bg hidden">
             <video id="live-preview-bg-vid" class="preview-bg hidden" autoplay loop muted></video>
+            <div id="preview-text-container" class="preview-text-3d-container hidden">
+                <div id="preview-text-3d" class="preview-text-3d">PAUSE</div>
+            </div>
             <div id="live-preview-bubble" class="preview-bubble">5:00</div>
+        </div>
+        <div class="status-footer">
+            <div id="asset-status">
+                <span id="asset-dot" class="status-dot"></span>
+                <span id="asset-label">Checking assets...</span>
+            </div>
+            <div id="app-version">v1.0.0</div>
         </div>
 
         <div class="section-title">Schedule</div>
@@ -575,11 +613,30 @@
             const posX = parseInt(document.getElementById('bubble_pos_x').value);
             const posY = parseInt(document.getElementById('bubble_pos_y').value);
             const anim = document.getElementById('animation_style').value;
+            const breakStyle = document.getElementById('break_style').value;
+            const customText = document.getElementById('custom_text').value || "PAUSE";
+
             const previewSize = size / 4.8;
             bubble.style.width = previewSize + "px"; bubble.style.height = previewSize + "px"; bubble.style.fontSize = (previewSize / 4) + "px";
             bubble.style.backgroundColor = isDarkMode ? `rgba(0,0,0,${opacity})` : `rgba(255,255,255,${opacity})`;
             bubble.style.left = `calc(${posX}% - ${previewSize * (posX/100)}px)`;
             bubble.style.top = `calc(${posY}% - ${previewSize * (posY/100)}px)`;
+
+            const textContainer = document.getElementById('preview-text-container');
+            const text3d = document.getElementById('preview-text-3d');
+            const bgImg = document.getElementById('live-preview-bg-img');
+            const bgVid = document.getElementById('live-preview-bg-vid');
+
+            if (breakStyle === 'text') {
+                textContainer.classList.remove('hidden');
+                text3d.innerText = customText;
+                bgImg.classList.add('hidden');
+                bgVid.classList.add('hidden');
+            } else {
+                textContainer.classList.add('hidden');
+                updatePreview(currentMediaPath); // Refresh media visibility
+            }
+
             if (anim === 'pulse') {
                 bubble.style.setProperty('--pulse-opacity-start', opacity);
                 bubble.style.setProperty('--pulse-opacity-end', Math.max(0, opacity - 0.3));
@@ -599,6 +656,7 @@
                 textOptions.classList.add('hidden');
                 mediaOptions.classList.remove('hidden');
             }
+            updatePreviewFromUI();
         }
 
         function save() {
@@ -655,6 +713,18 @@
                 document.getElementById('custom_text').value = s.custom_text || "PAUSE";
                 document.getElementById('mute_video').checked = s.mute_video !== false;
                 
+                // Status Footer Updates
+                document.getElementById('app-version').innerText = `v${event.data.version}`;
+                const assetDot = document.getElementById('asset-dot');
+                const assetLabel = document.getElementById('asset-label');
+                if (event.data.assetReady) {
+                    assetDot.className = 'status-dot dot-ready';
+                    assetLabel.innerText = 'Cinematic Assets: Ready';
+                } else {
+                    assetDot.className = 'status-dot dot-missing';
+                    assetLabel.innerText = 'Cinematic Assets: Syncing...';
+                }
+
                 toggleBreakStyle();
 
                 if (s.overlay_animation) updatePreview(s.overlay_animation);
