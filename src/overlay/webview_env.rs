@@ -17,7 +17,7 @@ pub fn get_assets_path() -> PathBuf {
     let mut config_path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
     config_path.push("PauseCat");
     config_path.push("assets");
-    if config_path.exists() {
+    if config_path.exists() && config_path.is_dir() {
         return config_path;
     }
 

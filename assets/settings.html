@@ -163,14 +163,30 @@
             pointer-events: none; z-index: 1;
         }
         .preview-text-3d {
-            font-size: 3rem; font-weight: 900; color: #fff;
-            text-transform: uppercase; transform: rotateX(20deg) rotateY(-20deg);
+            font-size: 3rem; font-weight: 900; 
+            color: var(--text-color, #fff);
+            text-transform: uppercase; 
+            transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg));
             text-shadow: 0 1px 0 #ccc, 0 2px 0 #bbb, 0 3px 2px rgba(0,0,0,0.3);
-            opacity: 0.2; animation: previewFloat 5s ease-in-out infinite;
+            opacity: var(--text-opacity, 0.2); 
+            animation: previewFloat 5s ease-in-out infinite;
+            text-align: center;
         }
         @keyframes previewFloat {
-            0%, 100% { transform: rotateX(20deg) rotateY(-20deg) translateZ(0); }
-            50% { transform: rotateX(25deg) rotateY(-15deg) translateZ(20px); }
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) translateZ(0); }
+            50% { transform: rotateX(calc(var(--rot-x, 20deg) + 5deg)) rotateY(calc(var(--rot-y, -20deg) + 5deg)) translateZ(10px); }
+        }
+        @keyframes previewRotate {
+            0% { transform: rotateX(var(--rot-x, 20deg)) rotateY(0deg); }
+            100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(360deg); }
+        }
+        @keyframes previewSwing {
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(-40deg); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(40deg); }
+        }
+        @keyframes previewPulse {
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) scale(1); opacity: var(--text-opacity, 0.2); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) scale(1.1); opacity: calc(var(--text-opacity, 0.2) + 0.1); }
         }
 
         .preview-bubble {
@@ -261,7 +277,7 @@
 </head>
 <body>
     <div class="header">
-        <img src="https://pausecat.app/assets/pauseCat.ico" alt="PauseCat">
+        <img id="header-logo" src="https://pausecat.app/assets/pauseCat.ico" alt="PauseCat">
         <h1>PauseCat Settings</h1>
     </div>
 
@@ -661,6 +677,13 @@
             const anim = document.getElementById('animation_style').value;
             const breakStyle = document.getElementById('break_style').value;
             const customText = document.getElementById('custom_text').value || "PAUSE";
+            
+            // Advanced Text Styles
+            const textAnim = document.getElementById('text_animation').value;
+            const rotX = document.getElementById('text_rotation_x').value;
+            const rotY = document.getElementById('text_rotation_y').value;
+            const textColor = document.getElementById('text_color').value;
+            const textOpacity = document.getElementById('text_opacity').value;
 
             const previewSize = size / 4.8;
             bubble.style.width = previewSize + "px"; bubble.style.height = previewSize + "px"; bubble.style.fontSize = (previewSize / 4) + "px";
@@ -676,6 +699,19 @@
             if (breakStyle === 'text') {
                 textContainer.classList.remove('hidden');
                 text3d.innerText = customText;
+                
+                // Apply advanced preview styles
+                text3d.style.setProperty('--text-color', textColor);
+                text3d.style.setProperty('--text-opacity', textOpacity);
+                text3d.style.setProperty('--rot-x', rotX + 'deg');
+                text3d.style.setProperty('--rot-y', rotY + 'deg');
+
+                if (textAnim === 'float') text3d.style.animation = 'previewFloat 5s ease-in-out infinite';
+                else if (textAnim === 'rotate') text3d.style.animation = 'previewRotate 10s linear infinite';
+                else if (textAnim === 'swing') text3d.style.animation = 'previewSwing 6s ease-in-out infinite';
+                else if (textAnim === 'pulse') text3d.style.animation = 'previewPulse 4s ease-in-out infinite';
+                else text3d.style.animation = 'none';
+
                 bgImg.classList.add('hidden');
                 bgVid.classList.add('hidden');
             } else {
@@ -779,6 +815,10 @@
                 } else {
                     assetDot.className = 'status-dot dot-missing';
                     assetLabel.innerText = 'Cinematic Assets: Syncing...';
+                }
+
+                if (event.data.logoPath) {
+                    document.getElementById('header-logo').src = event.data.logoPath;
                 }
 
                 toggleBreakStyle();

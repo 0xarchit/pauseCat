@@ -167,12 +167,15 @@ impl SettingsWindow {
                                 asset_path.push("default.webm");
                                 let asset_ready = asset_path.exists() && asset_path.metadata().map(|m| m.len() > 0).unwrap_or(false);
 
+                                let logo_path = "https://pausecat.app/assets/pauseCat.ico";
+
                                 let msg = format!(
-                                    "{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}, \"version\": \"{}\", \"assetReady\": {}}}", 
+                                    "{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}, \"version\": \"{}\", \"assetReady\": {}, \"logoPath\": \"{}\"}}", 
                                     serde_json::to_string(settings).unwrap_or_default(), 
                                     crate::system::is_dark_mode(),
                                     env!("CARGO_PKG_VERSION"),
-                                    asset_ready
+                                    asset_ready,
+                                    logo_path
                                 );
                                 let _ = webview.PostWebMessageAsJson(&HSTRING::from(msg));
                             }

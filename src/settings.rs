@@ -70,7 +70,7 @@ impl Default for Settings {
             bubble_pos_x: 5,
             bubble_pos_y: 5,
             animation_style: "float".to_string(),
-            break_style: "media".to_string(),
+            break_style: "text".to_string(),
             custom_text: "PAUSE".to_string(),
             mute_video: true,
             text_animation: "float".to_string(),
