@@ -160,6 +160,85 @@ pub fn cleanup_updates() {
     }
 }
 
+pub fn ensure_assets_sync(event_tx: Sender<AppEvent>) {
+    thread::spawn(move || {
+        let mut asset_path = Settings::get_config_dir();
+        asset_path.push("assets");
+        if !asset_path.exists() {
+            let _ = fs::create_dir_all(&asset_path);
+        }
+        asset_path.push("default.webm");
+
+        if asset_path.exists() {
+            return;
+        }
+
+        let client = match reqwest::blocking::Client::builder()
+            .user_agent("PauseCat-Asset-Syncer-v1")
+            .timeout(std::time::Duration::from_secs(30))
+            .build() {
+                Ok(c) => c,
+                Err(e) => {
+                    let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
+                    return;
+                }
+            };
+
+        // We fetch the latest release to find the browser_download_url for default.webm
+        let release: GithubRelease = match client.get(GITHUB_API_URL)
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .send()
+            .and_then(|r| r.json()) {
+                Ok(r) => r,
+                Err(e) => {
+                    let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
+                    return;
+                }
+            };
+
+        let asset = match release.assets.iter().find(|a| a.name == "default.webm") {
+            Some(a) => a,
+            None => {
+                let _ = event_tx.send(AppEvent::AssetDownloadError("default.webm not found in release assets".to_string()));
+                return;
+            }
+        };
+
+        match client.get(&asset.browser_download_url).send() {
+            Ok(mut response) => {
+                match fs::File::create(&asset_path) {
+                    Ok(mut file) => {
+                        let mut buffer = [0; 8192];
+                        loop {
+                            match response.read(&mut buffer) {
+                                Ok(0) => break,
+                                Ok(n) => {
+                                    if let Err(e) = std::io::Write::write_all(&mut file, &buffer[..n]) {
+                                        let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
+                                        return;
+                                    }
+                                }
+                                Err(e) => {
+                                    let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
+                                    return;
+                                }
+                            }
+                        }
+                        let _ = event_tx.send(AppEvent::AssetDownloaded("default.webm".to_string()));
+                    }
+                    Err(e) => {
+                        let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
+                    }
+                }
+            }
+            Err(e) => {
+                let _ = event_tx.send(AppEvent::AssetDownloadError(e.to_string()));
+            }
+        }
+    });
+}
+
 #[cfg(test)]
 mod internal_tests {
     use super::*;

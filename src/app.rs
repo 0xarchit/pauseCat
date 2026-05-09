@@ -60,6 +60,7 @@ impl App {
         self.tray = Some(TrayIcon::new(self.event_tx.clone())?);
 
         crate::updater::cleanup_updates();
+        crate::updater::ensure_assets_sync(self.event_tx.clone());
 
         let settings_clone = self.settings.clone();
         let event_tx_clone = self.event_tx.clone();
@@ -157,6 +158,14 @@ impl App {
                 if let Some(ref mut win) = self.settings_window {
                     win.send_update_error(err);
                 }
+            }
+            AppEvent::AssetDownloaded(name) => {
+                log::info!("Asset downloaded: {}", name);
+                // If the overlay is currently showing the 3D text fallback, we could trigger a reload,
+                // but for now, we'll just let the next break use the video.
+            }
+            AppEvent::AssetDownloadError(err) => {
+                log::error!("Asset download error: {}", err);
             }
             AppEvent::ThemeChanged(is_dark) => {
                 self.is_dark_mode = is_dark;

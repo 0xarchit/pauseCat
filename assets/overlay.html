@@ -143,10 +143,59 @@
         }
 
         .hidden { display: none !important; }
+
+        /* 3D Text Fallback */
+        .fallback-text-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: -1;
+            perspective: 1000px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+        }
+
+        .fallback-text-3d {
+            font-size: 15vw;
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            transform: rotateX(20deg) rotateY(-20deg);
+            text-shadow: 
+                0 1px 0 #ccc,
+                0 2px 0 #c9c9c9,
+                0 3px 0 #bbb,
+                0 4px 0 #b9b9b9,
+                0 5px 0 #aaa,
+                0 6px 1px rgba(0,0,0,.1),
+                0 0 5px rgba(0,0,0,.1),
+                0 1px 3px rgba(0,0,0,.3),
+                0 3px 5px rgba(0,0,0,.2),
+                0 5px 10px rgba(0,0,0,.25),
+                0 10px 10px rgba(0,0,0,.2),
+                0 20px 20px rgba(0,0,0,.15);
+            animation: textFloat 8s ease-in-out infinite;
+            opacity: 0.15;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        @keyframes textFloat {
+            0%, 100% { transform: rotateX(20deg) rotateY(-20deg) translateZ(0); }
+            50% { transform: rotateX(25deg) rotateY(-15deg) translateZ(50px); }
+        }
     </style>
 </head>
 <body>
     <div id="bg-media-container">
+        <div id="fallback-ui" class="fallback-text-container hidden">
+            <div class="fallback-text-3d">PAUSE</div>
+        </div>
         <img id="bg-image" class="hidden">
         <video id="bg-video" class="hidden" autoplay loop muted playsinline></video>
     </div>
@@ -256,11 +305,23 @@
                 if (event.data.mediaPath) {
                     const img = document.getElementById('bg-image');
                     const video = document.getElementById('bg-video');
+                    const fallback = document.getElementById('fallback-ui');
                     const ext = event.data.mediaPath.split('.').pop().toLowerCase();
+
+                    video.onerror = () => {
+                        console.warn("Video load failed, showing fallback UI");
+                        video.classList.add('hidden');
+                        fallback.classList.remove('hidden');
+                    };
+
                     if (['mp4', 'webm', 'ogg'].includes(ext)) {
                         video.src = event.data.mediaPath;
                         video.classList.remove('hidden');
-                        video.play().catch(e => console.error(e));
+                        video.play().catch(e => {
+                            console.error(e);
+                            video.classList.add('hidden');
+                            fallback.classList.remove('hidden');
+                        });
                     } else {
                         img.src = event.data.mediaPath;
                         img.classList.remove('hidden');
