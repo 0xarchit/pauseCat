@@ -64,12 +64,12 @@ impl Default for Settings {
             overlay_animation: "default.webm".to_string(),
             whitelist: Vec::new(),
             break_messages: vec![
-                "Breathe In...".to_string(),
-                "Take a stretch".to_string(),
-                "Rest your eyes".to_string(),
-                "Hydrate yourself".to_string()
+                "Take a deep breath".to_string(),
+                "Stretch your body".to_string(),
+                "Rest your eyes for a moment".to_string(),
+                "Time for a quick water break".to_string()
             ],
-            randomize_messages: false,
+            randomize_messages: true,
             show_work_duration_status: true,
             bubble_opacity: 0.1,
             bubble_size: 580,
