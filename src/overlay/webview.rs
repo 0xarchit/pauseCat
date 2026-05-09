@@ -57,28 +57,74 @@ where F: FnOnce(&str) {
 pub fn handle_resource_request(uri: &str, assets_path: &std::path::Path) -> Option<(Vec<u8>, String)> {
     if uri.starts_with("https://pausecat.app/") {
         let path_part = uri.trim_start_matches("https://pausecat.app/");
-        let target_path = if path_part.starts_with("assets/") {
-            assets_path.join(path_part.trim_start_matches("assets/"))
+        let file_name = if path_part.starts_with("assets/") {
+            path_part.trim_start_matches("assets/")
+        } else {
+            ""
+        };
+
+        if !file_name.is_empty() {
+            // 1. Try provided assets_path (e.g. Config Dir for lazy-loaded assets)
+            let target_path = assets_path.join(file_name);
+            if target_path.exists() && target_path.is_file() {
+                if let Ok(content) = std::fs::read(&target_path) {
+                    return Some((content, get_mime_type(file_name)));
+                }
+            }
+
+            // 2. Try fallback (Near EXE for bundled assets)
+            if let Ok(mut exe_path) = std::env::current_exe() {
+                exe_path.pop();
+                let fallback_path = exe_path.join("assets").join(file_name);
+                if fallback_path.exists() && fallback_path.is_file() {
+                    if let Ok(content) = std::fs::read(&fallback_path) {
+                        return Some((content, get_mime_type(file_name)));
+                    }
+                }
+            }
+            
+            // 3. Try CWD fallback
+            let cwd_path = std::path::PathBuf::from("assets").join(file_name);
+            if cwd_path.exists() && cwd_path.is_file() {
+                if let Ok(content) = std::fs::read(&cwd_path) {
+                    return Some((content, get_mime_type(file_name)));
+                }
+            }
         } else if path_part.starts_with("local/") {
             let encoded = path_part.trim_start_matches("local/");
             if let Ok(path_bytes) = general_purpose::STANDARD.decode(encoded) {
-                std::path::PathBuf::from(String::from_utf8(path_bytes).unwrap_or_default())
-            } else { std::path::PathBuf::new() }
-        } else { std::path::PathBuf::new() };
-
-        if target_path.exists() && target_path.is_file() {
-            if let Ok(content) = std::fs::read(&target_path) {
-                let ext = target_path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                let mime = match ext.to_lowercase().as_str() {
-                    "ico" => "image/x-icon", "webm" => "video/webm", "mp4" => "video/mp4",
-                    "png" => "image/png", "jpg" | "jpeg" => "image/jpeg", "gif" => "image/gif",
-                    _ => "application/octet-stream",
-                };
-                return Some((content, mime.to_string()));
+                let target_path = std::path::PathBuf::from(String::from_utf8(path_bytes).unwrap_or_default());
+                if target_path.exists() && target_path.is_file() {
+                    if let Ok(content) = std::fs::read(&target_path) {
+                        let ext = target_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                        return Some((content, get_mime_type(ext)));
+                    }
+                }
             }
         }
     }
     None
+}
+
+fn get_mime_type(path_or_ext: &str) -> String {
+    let ext = if path_or_ext.contains('.') {
+        path_or_ext.split('.').last().unwrap_or("")
+    } else {
+        path_or_ext
+    };
+    
+    match ext.to_lowercase().as_str() {
+        "ico" => "image/x-icon",
+        "webm" => "video/webm",
+        "mp4" => "video/mp4",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "html" => "text/html",
+        "css" => "text/css",
+        "js" => "application/javascript",
+        _ => "application/octet-stream",
+    }.to_string()
 }
 
 pub fn on_overlay_controller_completed(result: windows::core::Result<()>, controller: Option<ICoreWebView2Controller>, hwnd: HWND) -> windows::core::Result<()> {

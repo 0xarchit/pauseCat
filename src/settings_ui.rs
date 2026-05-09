@@ -159,6 +159,27 @@ impl SettingsWindow {
                                     }
                                     Ok(())
                                 })), &mut 0);
+
+                                let assets_path = webview_env::get_assets_path();
+                                let env_res = env_inner.clone();
+                                let _ = webview.AddWebResourceRequestedFilter(w!("https://pausecat.app/*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+                                let _ = webview.add_WebResourceRequested(&WebResourceRequestedEventHandler::create(Box::new(move |_, args| {
+                                    if let (Some(args), env) = (args, &env_res) {
+                                        let request = args.Request()?;
+                                        let mut uri_ptr = PWSTR::null();
+                                        let _ = request.Uri(&mut uri_ptr);
+                                        let uri = uri_ptr.to_string().unwrap_or_default();
+                                        if let Some((content, mime)) = crate::overlay::webview::handle_resource_request(&uri, &assets_path) {
+                                            let stream = CreateStreamOnHGlobal(HGLOBAL(std::ptr::null_mut()), true)?;
+                                            let _ = (stream.Write(content.as_ptr() as *const _, content.len() as u32, None), stream.Seek(0, STREAM_SEEK_SET, None));
+                                            let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(format!("Content-Type: {}\r\n", mime)))?;
+                                            let _ = args.SetResponse(&response);
+                                        }
+                                        CoTaskMemFree(Some(uri_ptr.0 as *const _));
+                                    }
+                                    Ok(())
+                                })), &mut 0);
+
                                 let _ = webview.NavigateToString(&HSTRING::from(include_str!("../assets/settings.html")));
                                 let settings_h = GetPropW(hwnd, w!("Settings"));
                                 let settings = &*(settings_h.0 as *const Settings);
