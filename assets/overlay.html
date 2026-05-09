@@ -162,10 +162,10 @@
         .fallback-text-3d {
             font-size: 15vw;
             font-weight: 900;
-            color: #fff;
+            color: var(--text-color, #fff);
             text-transform: uppercase;
             letter-spacing: -0.05em;
-            transform: rotateX(20deg) rotateY(-20deg);
+            transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg));
             text-shadow: 
                 0 1px 0 #ccc,
                 0 2px 0 #c9c9c9,
@@ -179,15 +179,29 @@
                 0 5px 10px rgba(0,0,0,.25),
                 0 10px 10px rgba(0,0,0,.2),
                 0 20px 20px rgba(0,0,0,.15);
-            animation: textFloat 8s ease-in-out infinite;
-            opacity: 0.15;
+            opacity: var(--text-opacity, 0.15);
             user-select: none;
             pointer-events: none;
         }
 
         @keyframes textFloat {
-            0%, 100% { transform: rotateX(20deg) rotateY(-20deg) translateZ(0); }
-            50% { transform: rotateX(25deg) rotateY(-15deg) translateZ(50px); }
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) translateZ(0); }
+            50% { transform: rotateX(calc(var(--rot-x, 20deg) + 5deg)) rotateY(calc(var(--rot-y, -20deg) + 5deg)) translateZ(50px); }
+        }
+
+        @keyframes textRotate {
+            0% { transform: rotateX(var(--rot-x, 20deg)) rotateY(0deg); }
+            100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(360deg); }
+        }
+
+        @keyframes textSwing {
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(-40deg); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(40deg); }
+        }
+
+        @keyframes textPulse {
+            0%, 100% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) scale(1); opacity: var(--text-opacity, 0.15); }
+            50% { transform: rotateX(var(--rot-x, 20deg)) rotateY(var(--rot-y, -20deg)) scale(1.1); opacity: calc(var(--text-opacity, 0.15) + 0.1); }
         }
     </style>
 </head>
@@ -281,6 +295,25 @@
                 const fallbackText = fallback.querySelector('.fallback-text-3d');
                 if (event.data.customText) {
                     fallbackText.innerText = event.data.customText;
+                }
+
+                // Apply advanced text styles
+                root.style.setProperty('--text-color', event.data.textColor || '#ffffff');
+                root.style.setProperty('--text-opacity', event.data.textOpacity ?? 0.15);
+                root.style.setProperty('--rot-x', (event.data.textRotationX ?? 20) + 'deg');
+                root.style.setProperty('--rot-y', (event.data.textRotationY ?? -20) + 'deg');
+
+                const textAnim = event.data.textAnimation || 'float';
+                if (textAnim === 'float') {
+                    fallbackText.style.animation = 'textFloat 8s ease-in-out infinite';
+                } else if (textAnim === 'rotate') {
+                    fallbackText.style.animation = 'textRotate 10s linear infinite';
+                } else if (textAnim === 'swing') {
+                    fallbackText.style.animation = 'textSwing 6s ease-in-out infinite';
+                } else if (textAnim === 'pulse') {
+                    fallbackText.style.animation = 'textPulse 4s ease-in-out infinite';
+                } else {
+                    fallbackText.style.animation = 'none';
                 }
 
                 if (event.data.breakStyle === 'text') {

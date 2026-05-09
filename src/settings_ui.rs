@@ -166,7 +166,7 @@ impl SettingsWindow {
                                 let mut asset_path = Settings::get_config_dir();
                                 asset_path.push("assets");
                                 asset_path.push("default.webm");
-                                let asset_ready = asset_path.exists();
+                                let asset_ready = asset_path.exists() && asset_path.metadata().map(|m| m.len() > 0).unwrap_or(false);
 
                                 let msg = format!(
                                     "{{\"action\":\"load\", \"settings\": {}, \"isDark\": {}, \"version\": \"{}\", \"assetReady\": {}}}", 

@@ -412,6 +412,52 @@
                 <div class="add-row">
                     <input type="text" id="custom_text" maxlength="20" placeholder="e.g. PAUSE" oninput="updatePreviewFromUI()">
                 </div>
+
+                <div class="setting-row" style="margin-top: 16px;">
+                    <div class="setting-info">
+                        <span class="setting-label">Text Animation</span>
+                        <span class="setting-description">Movement behavior</span>
+                    </div>
+                    <select id="text_animation" onchange="updatePreviewFromUI()">
+                        <option value="none">Static</option>
+                        <option value="float">Gentle Float</option>
+                        <option value="rotate">3D Rotate</option>
+                        <option value="swing">Swing</option>
+                        <option value="pulse">Soft Pulse</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-label">3D Rotation X</span>
+                        <span class="setting-description">Tilt forward/back (deg)</span>
+                    </div>
+                    <input type="range" id="text_rotation_x" min="-90" max="90" step="1" oninput="updatePreviewFromUI()">
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-label">3D Rotation Y</span>
+                        <span class="setting-description">Tilt side to side (deg)</span>
+                    </div>
+                    <input type="range" id="text_rotation_y" min="-90" max="90" step="1" oninput="updatePreviewFromUI()">
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-label">Text Color</span>
+                        <span class="setting-description">Pick your vibe</span>
+                    </div>
+                    <input type="color" id="text_color" oninput="updatePreviewFromUI()">
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-label">Text Translucency</span>
+                        <span class="setting-description">Ghostly to Solid</span>
+                    </div>
+                    <input type="range" id="text_opacity" min="0.05" max="1.0" step="0.05" oninput="updatePreviewFromUI()">
+                </div>
             </div>
             
             <div id="media-style-options">
@@ -690,7 +736,12 @@
                 animation_style: document.getElementById('animation_style').value,
                 break_style: document.getElementById('break_style').value,
                 custom_text: document.getElementById('custom_text').value || "PAUSE",
-                mute_video: document.getElementById('mute_video').checked
+                mute_video: document.getElementById('mute_video').checked,
+                text_animation: document.getElementById('text_animation').value,
+                text_rotation_x: parseInt(document.getElementById('text_rotation_x').value),
+                text_rotation_y: parseInt(document.getElementById('text_rotation_y').value),
+                text_color: document.getElementById('text_color').value,
+                text_opacity: parseFloat(document.getElementById('text_opacity').value)
             };
             window.chrome.webview.postMessage({ action: "save", settings: settings });
         }
@@ -712,6 +763,11 @@
                 document.getElementById('break_style').value = s.break_style || "media";
                 document.getElementById('custom_text').value = s.custom_text || "PAUSE";
                 document.getElementById('mute_video').checked = s.mute_video !== false;
+                document.getElementById('text_animation').value = s.text_animation || "float";
+                document.getElementById('text_rotation_x').value = s.text_rotation_x ?? 20;
+                document.getElementById('text_rotation_y').value = s.text_rotation_y ?? -20;
+                document.getElementById('text_color').value = s.text_color || "#ffffff";
+                document.getElementById('text_opacity').value = s.text_opacity ?? 0.15;
                 
                 // Status Footer Updates
                 document.getElementById('app-version').innerText = `v${event.data.version}`;

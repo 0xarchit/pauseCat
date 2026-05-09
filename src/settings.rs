@@ -41,6 +41,11 @@ pub struct Settings {
     pub break_style: String, // "media" or "text"
     pub custom_text: String,
     pub mute_video: bool,
+    pub text_animation: String,
+    pub text_rotation_x: i32,
+    pub text_rotation_y: i32,
+    pub text_color: String,
+    pub text_opacity: f32,
 }
 
 impl Default for Settings {
@@ -68,6 +73,11 @@ impl Default for Settings {
             break_style: "media".to_string(),
             custom_text: "PAUSE".to_string(),
             mute_video: true,
+            text_animation: "float".to_string(),
+            text_rotation_x: 20,
+            text_rotation_y: -20,
+            text_color: "#ffffff".to_string(),
+            text_opacity: 0.15,
         }
     }
 }
