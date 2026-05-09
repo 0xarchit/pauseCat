@@ -439,6 +439,46 @@
                 </div>
             </div>
         </div>
+
+        <div class="section-title">Content</div>
+        <div class="card">
+            <div class="setting-row">
+                <div class="setting-info"><span class="setting-label">Show Work Status</span></div>
+                <label class="switch"><input type="checkbox" id="show_work_status"><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info"><span class="setting-label">Randomize Messages</span></div>
+                <label class="switch"><input type="checkbox" id="randomize_messages"><span class="slider"></span></label>
+            </div>
+            <div class="setting-info" style="margin-top: 16px;"><span class="setting-label">Custom Messages</span></div>
+            <div id="break-messages-tags" class="list-container"></div>
+            <div class="add-row">
+                <input type="text" id="new-message-input" placeholder="New message...">
+                <button class="btn-primary" onclick="addBreakMessage()">Add</button>
+            </div>
+        </div>
+
+        <div class="section-title">Whitelist</div>
+        <div class="card">
+            <div id="whitelist-tags" class="list-container"></div>
+            <div class="add-row">
+                <select id="running-apps-select"><option value="">Select app...</option></select>
+                <button class="btn-secondary" onclick="refreshApps()">Refresh</button>
+                <button class="btn-primary" onclick="addWhitelistedApp()">Add</button>
+            </div>
+        </div>
+
+        <div class="section-title">System</div>
+        <div class="card">
+            <div class="setting-row">
+                <div class="setting-info"><span class="setting-label">Launch on Startup</span></div>
+                <label class="switch"><input type="checkbox" id="autostart"><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info"><span class="setting-label">App Updates</span></div>
+                <button id="check-update-btn" class="btn-secondary" onclick="checkUpdates()">Check for Updates</button>
+            </div>
+        </div>
     </div>
 
     <div class="footer">
@@ -518,7 +558,7 @@
             const settings = {
                 work_duration_secs: document.getElementById('work_duration').value * 60,
                 break_duration_secs: document.getElementById('break_duration').value * 60,
-                mode: document.getElementById('mode').value,
+                mode: document.getElementById('mode').value || "soft",
                 autostart: document.getElementById('autostart').checked,
                 overlay_animation: currentMediaPath || "default.webm",
                 whitelist: currentWhitelist,
@@ -551,6 +591,9 @@
         window.chrome.webview.addEventListener('message', event => {
             if (event.data.action === "load") {
                 const s = event.data.settings;
+                isDarkMode = event.data.isDark;
+                if (isDarkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark');
+
                 document.getElementById('work_duration').value = s.work_duration_secs / 60;
                 document.getElementById('break_duration').value = s.break_duration_secs / 60;
                 document.getElementById('bubble_opacity').value = s.bubble_opacity;
@@ -573,24 +616,58 @@
                 document.getElementById('text_depth').value = s.text_depth ?? 5;
                 document.getElementById('adaptive_text_color').checked = s.adaptive_text_color !== false;
                 
-                isDarkMode = event.data.isDark;
+                document.getElementById('autostart').checked = s.autostart;
+                document.getElementById('randomize_messages').checked = s.randomize_messages;
+                document.getElementById('show_work_status').checked = s.show_work_duration_status;
+
+                currentWhitelist = s.whitelist || []; renderList('whitelist-tags', currentWhitelist, 'whitelist');
+                currentBreakMessages = s.break_messages || []; renderList('break-messages-tags', currentBreakMessages, 'messages');
+
+                if (event.data.logoPath) document.getElementById('header-logo').src = event.data.logoPath;
+                if (event.data.version) document.getElementById('app-version').innerText = `v${event.data.version}`;
+                
+                const assetDot = document.getElementById('asset-dot');
+                const assetLabel = document.getElementById('asset-label');
+                if (event.data.assetReady) {
+                    assetDot.className = 'status-dot dot-ready'; assetLabel.innerText = 'Cinematic Assets: Ready';
+                } else {
+                    assetDot.className = 'status-dot dot-missing'; assetLabel.innerText = 'Cinematic Assets: Syncing...';
+                }
+
                 toggleBreakStyle();
+            } else if (event.data.action === "asset_synced") {
+                const dot = document.getElementById('asset-dot');
+                dot.className = 'status-dot dot-ready';
+                document.getElementById('asset-label').innerText = 'Cinematic Assets: Ready';
+            } else if (event.data.action === "asset_progress") {
+                document.getElementById('asset-label').innerText = `Cinematic Assets: Syncing (${event.data.percentage}%)`;
+            } else if (event.data.action === "theme_changed") {
+                isDarkMode = event.data.isDark;
+                if (isDarkMode) document.body.classList.add('dark'); else document.body.classList.remove('dark');
+                updatePreviewFromUI();
             }
         });
 
-        function selectMedia() { window.chrome.webview.postMessage({ action: "select_media" }); }
-        function startUpdate() { window.chrome.webview.postMessage({ action: "start_update" }); }
-        function updatePreview(path) {
-            currentMediaPath = path;
-            const vid = document.getElementById('live-preview-bg-vid');
-            const img = document.getElementById('live-preview-bg-img');
-            vid.classList.add('hidden'); img.classList.add('hidden');
-            if (path.endsWith('.webm') || path.endsWith('.mp4')) {
-                vid.src = path; vid.classList.remove('hidden');
-            } else {
-                img.src = path; img.classList.remove('hidden');
-            }
+        function renderList(id, list, type) {
+            const container = document.getElementById(id); container.innerHTML = "";
+            list.forEach(item => {
+                const tag = document.createElement('div'); tag.className = 'tag';
+                tag.innerHTML = `${item} <span onclick="removeItem('${type}', '${item.replace(/'/g, "\\'")}')">&times;</span>`;
+                container.appendChild(tag);
+            });
         }
+        function removeItem(type, item) {
+            if (type === 'whitelist') { currentWhitelist = currentWhitelist.filter(i => i !== item); renderList('whitelist-tags', currentWhitelist, 'whitelist'); }
+            else { currentBreakMessages = currentBreakMessages.filter(i => i !== item); renderList('break-messages-tags', currentBreakMessages, 'messages'); }
+        }
+        function addBreakMessage() {
+            const input = document.getElementById('new-message-input'); const val = input.value.trim();
+            if (val && !currentBreakMessages.includes(val)) { currentBreakMessages.push(val); input.value = ""; renderList('break-messages-tags', currentBreakMessages, 'messages'); }
+        }
+        function selectMedia() { window.chrome.webview.postMessage({ action: "select_media" }); }
+        function refreshApps() { window.chrome.webview.postMessage({ action: "get_apps" }); }
+        function checkUpdates() { window.chrome.webview.postMessage({ action: "check_updates" }); }
+        function retrySync() { window.chrome.webview.postMessage({ action: "retry_sync" }); }
     </script>
 </body>
 </html>
