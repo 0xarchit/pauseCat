@@ -326,6 +326,8 @@
                         fallback.classList.remove('hidden');
                     };
 
+                    video.muted = event.data.muteVideo !== false;
+
                     if (['mp4', 'webm', 'ogg'].includes(ext)) {
                         video.src = event.data.mediaPath;
                         video.classList.remove('hidden');

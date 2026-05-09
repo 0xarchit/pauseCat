@@ -40,6 +40,7 @@ pub struct Settings {
     pub animation_style: String,
     pub break_style: String, // "media" or "text"
     pub custom_text: String,
+    pub mute_video: bool,
 }
 
 impl Default for Settings {
@@ -66,6 +67,7 @@ impl Default for Settings {
             animation_style: "float".to_string(),
             break_style: "media".to_string(),
             custom_text: "PAUSE".to_string(),
+            mute_video: true,
         }
     }
 }

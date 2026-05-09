@@ -377,6 +377,17 @@
             </div>
             
             <div id="media-style-options">
+                <div class="setting-row" style="margin-top: 16px;">
+                    <div class="setting-info">
+                        <span class="setting-label">Mute Video</span>
+                        <span class="setting-description">Disable sound for break videos</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="mute_video">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
                 <div class="setting-info" style="margin-top: 16px;">
                     <span class="setting-label">Background Media</span>
                     <span class="setting-description">Select your own vibe</span>
@@ -620,7 +631,8 @@
                 bubble_pos_y: parseInt(document.getElementById('bubble_pos_y').value),
                 animation_style: document.getElementById('animation_style').value,
                 break_style: document.getElementById('break_style').value,
-                custom_text: document.getElementById('custom_text').value || "PAUSE"
+                custom_text: document.getElementById('custom_text').value || "PAUSE",
+                mute_video: document.getElementById('mute_video').checked
             };
             window.chrome.webview.postMessage({ action: "save", settings: settings });
         }
@@ -641,6 +653,7 @@
                 document.getElementById('animation_style').value = s.animation_style || "float";
                 document.getElementById('break_style').value = s.break_style || "media";
                 document.getElementById('custom_text').value = s.custom_text || "PAUSE";
+                document.getElementById('mute_video').checked = s.mute_video !== false;
                 
                 toggleBreakStyle();
 
