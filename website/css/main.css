@@ -144,6 +144,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   margin: 0 auto;
+  container-type: inline-size;
 }
 
 .overlay-layer-0 {
@@ -172,7 +173,7 @@
 .overlay-layer-1-text {
   font-family: 'Cormorant Garamond', serif;
   font-weight: 700;
-  font-size: 18vw;
+  font-size: 20cqi;
   color: var(--text-primary);
   opacity: 0.09;
   transform-style: preserve-3d;
@@ -188,8 +189,8 @@
   position: absolute;
   top: 8%;
   left: 6%;
-  width: clamp(120px, 40vw, 200px);
-  height: clamp(120px, 40vw, 200px);
+  width: 23.5cqi;
+  height: 23.5cqi;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.09);
   backdrop-filter: blur(28px) saturate(160%);
@@ -206,7 +207,7 @@
 .bubble-time {
   font-family: 'Cormorant Garamond', serif;
   font-weight: 600;
-  font-size: clamp(1.8rem, 6vw, 3rem);
+  font-size: 5.6cqi;
   color: var(--text-primary);
   line-height: 1;
 }
@@ -214,30 +215,30 @@
 .bubble-title {
   font-family: 'Syne', sans-serif;
   font-weight: 600;
-  font-size: clamp(0.5rem, 1.5vw, 0.7rem);
+  font-size: 1.3cqi;
   text-transform: uppercase;
   letter-spacing: 0.15em;
   opacity: 0.75;
-  margin-top: 4px;
+  margin-top: 0.5cqi;
 }
 
 .bubble-sub {
   font-family: 'Syne', sans-serif;
   font-weight: 400;
-  font-size: clamp(0.45rem, 1vw, 0.6rem);
+  font-size: 1.1cqi;
   opacity: 0.45;
-  margin-top: 2px;
+  margin-top: 0.3cqi;
 }
 
 .bubble-skip {
   position: absolute;
-  bottom: clamp(12px, 4vw, 24px);
+  bottom: 2.8cqi;
   font-family: 'Syne', sans-serif;
   font-weight: 600;
-  font-size: clamp(0.5rem, 1.5vw, 0.65rem);
+  font-size: 1.2cqi;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 4px 12px;
+  padding: 0.5cqi 1.4cqi;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(255,255,255,0.2);
   background: transparent;
@@ -253,8 +254,13 @@
 
 .overlay-layer-3 {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
+  bottom: 1.8cqi;
+  right: 1.8cqi;
+}
+
+.overlay-layer-3 .badge-mode-soft {
+  font-size: 1.2cqi;
+  padding: 0.5cqi 1.2cqi;
 }
 
 /* How It Works */
