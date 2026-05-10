@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PauseCat — The High-Performance Windows Break Reminder</title>
+    <meta
+      name="description"
+      content="PauseCat lives in your Windows system tray and enforces break intervals. Built in Rust. Under 1.5 MB. Hardware accelerated."
+    />
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <link rel="stylesheet" href="css/main.css" />
+    <script type="module" src="js/main.js"></script>
+  </head>
+  <body>
+    <!-- 1. NAVIGATION -->
+    <nav>
+      <div class="container nav-content">
+        <a href="#" class="nav-logo">
+          <img src="assets/logo.svg" alt="PauseCat Logo" />
+          PauseCat
+        </a>
+        <div class="nav-links">
+          <a href="#features">FEATURES</a>
+          <a href="#how-it-works">HOW IT WORKS</a>
+          <a href="#opensource">OPEN SOURCE</a>
+          <a href="#download">DOWNLOAD</a>
+        </div>
+        <div class="nav-actions">
+          <a
+            href="https://github.com/0xarchit/pauseCat"
+            class="btn-ghost"
+            target="_blank"
+            rel="noopener"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="display: inline-block; vertical-align: -0.15em"
+            >
+              <polygon
+                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+              />
+            </svg>
+            Star on GitHub
+          </a>
+          <a
+            href="https://github.com/0xarchit/pauseCat/releases/latest"
+            data-action="download"
+            class="btn-primary small"
+          >
+            DOWNLOAD
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- 2. HERO SECTION -->
+    <section id="hero">
+      <div class="container hero-content">
+        <div class="badge-os reveal">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="
+              display: inline-block;
+              vertical-align: -0.1em;
+              margin-right: 4px;
+            "
+          >
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          Windows 10 / 11
+        </div>
+
+        <h1 class="headline-hero text-center mt-8 reveal">
+          Your screen<br /><em>can wait.</em>
+        </h1>
+
+        <p class="text-secondary text-center mt-8 max-w-[520px] reveal text-lg">
+          PauseCat lives in your Windows system tray and enforces break
+          intervals — blurring your screen, counting down a glassmorphic
+          overlay, and resuming only when it's done.<br />
+          Built in Rust. Under 1.5 MB. Always watching.
+        </p>
+
+        <div class="flex items-center justify-center gap-6 mt-12 reveal">
+          <a
+            href="https://github.com/0xarchit/pauseCat/releases/latest"
+            data-action="download"
+            class="btn-primary"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="
+                display: inline-block;
+                vertical-align: -0.15em;
+                margin-right: 6px;
+              "
+            >
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            Download for Windows
+          </a>
+          <a
+            href="https://github.com/0xarchit/pauseCat"
+            class="btn-ghost"
+            target="_blank"
+            rel="noopener"
+          >
+            View on GitHub <span class="arrow">→</span>
+          </a>
+        </div>
+
+        <img
+          src="assets/logo.svg"
+          alt="PauseCat Logo Float"
+          class="hero-logo mt-12 reveal"
+        />
+
+        <p
+          class="text-center mt-2 mb-4 reveal"
+          style="
+            font-family: &quot;Cormorant Garamond&quot;, serif;
+            font-style: italic;
+            font-size: 1.4rem;
+            color: var(--pink);
+          "
+        >
+          "Increase productivity with paws-itive breaks"
+        </p>
+
+        <div class="stats-strip mt-8">
+          <div class="stat">
+            <span class="stat-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                />
+              </svg>
+            </span>
+            <span class="stat-value" data-stat="stars">—</span>
+            <span class="stat-label">stars</span>
+          </div>
+          <span class="stat-divider">·</span>
+          <div class="stat">
+            <span class="stat-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" x2="12" y1="15" y2="3" />
+              </svg>
+            </span>
+            <span class="stat-value" data-stat="downloads">—</span>
+            <span class="stat-label">downloads</span>
+          </div>
+          <span class="stat-divider">·</span>
+          <div class="stat">
+            <span class="stat-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+                />
+                <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="stat-value" data-stat="version">—</span>
+            <span class="stat-label">latest</span>
+          </div>
+        </div>
+
+        <p
+          class="mt-8 text-center text-xs"
+          style="
+            color: var(--text-muted);
+            font-family: &quot;Syne&quot;, sans-serif;
+          "
+        >
+          <code>PauseCat_Installer.msi</code> ·
+          <span
+            class="badge-os"
+            style="
+              padding: 2px 6px;
+              border: none;
+              background: var(--bg-surface);
+            "
+            data-stat="version"
+            >—</span
+          >
+          · Apache 2.0 · Requires Windows 10/11 + WebView2
+        </p>
+      </div>
+      <div class="scroll-cue"></div>
+    </section>
+
+    <!-- 3. TICKER STRIP -->
+    <div class="ticker-wrap">
+      <div class="ticker">
+        <div class="ticker-item">
+          TAKE A BREAK <span class="ticker-sep">✦</span> BUILT IN RUST
+          <span class="ticker-sep">✦</span> WINDOWS NATIVE
+          <span class="ticker-sep">✦</span> APACHE 2.0
+          <span class="ticker-sep">✦</span> < 1.5 MB
+          <span class="ticker-sep">✦</span> OPEN SOURCE
+          <span class="ticker-sep">✦</span>
+        </div>
+        <div class="ticker-item">
+          TAKE A BREAK <span class="ticker-sep">✦</span> BUILT IN RUST
+          <span class="ticker-sep">✦</span> WINDOWS NATIVE
+          <span class="ticker-sep">✦</span> APACHE 2.0
+          <span class="ticker-sep">✦</span> < 1.5 MB
+          <span class="ticker-sep">✦</span> OPEN SOURCE
+          <span class="ticker-sep">✦</span>
+        </div>
+        <div class="ticker-item">
+          TAKE A BREAK <span class="ticker-sep">✦</span> BUILT IN RUST
+          <span class="ticker-sep">✦</span> WINDOWS NATIVE
+          <span class="ticker-sep">✦</span> APACHE 2.0
+          <span class="ticker-sep">✦</span> < 1.5 MB
+          <span class="ticker-sep">✦</span> OPEN SOURCE
+          <span class="ticker-sep">✦</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. OVERLAY PREVIEW -->
+    <section id="overlay-preview" class="bg-layer text-center">
+      <div class="container">
+        <div class="ui-label" style="color: var(--pink)">
+          THE BREAK EXPERIENCE
+        </div>
+        <h2 class="headline-section serif mt-4 mb-12">
+          <em>"When it's time, PauseCat takes over."</em>
+        </h2>
+
+        <div class="overlay-preview-card reveal">
+          <div class="overlay-layer-0"></div>
+          <div class="overlay-layer-1">
+            <div class="overlay-layer-1-text">PAUSE</div>
+          </div>
+          <div class="overlay-layer-2">
+            <div class="bubble-time">04:58</div>
+            <div class="bubble-title">TAKE A BREAK</div>
+            <div class="bubble-sub">You've worked 1h 0m</div>
+            <button class="bubble-skip">[ SKIP ]</button>
+          </div>
+          <div class="overlay-layer-3">
+            <div class="badge-mode-soft">SOFT MODE</div>
+          </div>
+        </div>
+
+        <div class="flex justify-center flex-wrap gap-4 mt-8 reveal">
+          <div class="chip">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="
+                display: inline-block;
+                vertical-align: -0.15em;
+                margin-right: 4px;
+              "
+            >
+              <path
+                d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+              />
+            </svg>
+            Hardware Accelerated
+          </div>
+          <div class="chip">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#3b82f6"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="
+                display: inline-block;
+                vertical-align: -0.15em;
+                margin-right: 4px;
+              "
+            >
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+            Soft Mode — Skippable
+          </div>
+          <div class="chip">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="
+                display: inline-block;
+                vertical-align: -0.15em;
+                margin-right: 4px;
+              "
+            >
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+            </svg>
+            Theme-Aware
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. HOW IT WORKS -->
+    <section id="how-it-works">
+      <div class="container">
+        <div class="ui-label text-center" style="color: var(--pink)">
+          HOW IT WORKS
+        </div>
+        <h2 class="headline-section serif text-center mt-4 mb-12">
+          <em>"Dead simple to set up."</em>
+        </h2>
+
+        <div class="steps-row gap-8 reveal">
+          <div class="step-item flex-col">
+            <div class="step-number">01</div>
+            <h3 class="step-title">Install</h3>
+            <p class="text-secondary" style="margin-bottom: 0.5rem">
+              <em>"One MSI. That's it."</em>
+            </p>
+            <p class="text-secondary text-sm">
+              Download <code>PauseCat_Installer.msi</code> from GitHub Releases.
+              The WiX installer checks for the WebView2 runtime and registers
+              autostart. Run it, find the cat in your tray.
+            </p>
+          </div>
+          <div class="step-connector"></div>
+
+          <div class="step-item flex-col">
+            <div class="step-number">02</div>
+            <h3 class="step-title">Configure</h3>
+            <p class="text-secondary" style="margin-bottom: 0.5rem">
+              <em>"Right-click. Settings. Done."</em>
+            </p>
+            <p class="text-secondary text-sm">
+              Set work interval (5 min – 4 hours), break duration, break mode
+              (Soft or Hard), custom messages, and 3D text style. Every setting
+              live-previews inside the settings window.
+            </p>
+          </div>
+          <div class="step-connector"></div>
+
+          <div class="step-item flex-col">
+            <div class="step-number">03</div>
+            <h3 class="step-title">Work. Break. Repeat.</h3>
+            <p class="text-secondary" style="margin-bottom: 0.5rem">
+              <em>"PauseCat handles the rest."</em>
+            </p>
+            <p class="text-secondary text-sm">
+              Interval fires → GDI captures your screen → Rust blurs it →
+              WebView2 break overlay appears. Lock your screen? Timer pauses.
+              Playing music? PauseCat pauses it. Sleep? Timer resumes when
+              you're back.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. FEATURES -->
+    <section id="features" class="bg-layer">
+      <div class="container">
+        <h2 class="headline-section text-right mb-12 reveal">
+          Everything you'd engineer yourself.<br />
+          Already done.
+        </h2>
+
+        <div class="features-grid">
+          <div class="card reveal flex-col md:col-span-2 lg:col-span-2">
+            <div class="feature-icon-area">FULL CONFIG</div>
+            <h3 class="headline-card mb-4" style="color: var(--text-primary)">
+              "Deep Customization"
+            </h3>
+            <p class="text-secondary text-sm mb-4">
+              Soft or Hard mode. Custom break messages, randomized. 3D text
+              behind the overlay: rotation X/Y/Z, float/rotate/swing/pulse
+              animation, opacity, depth, glow. Bubble: size, position, opacity.
+            </p>
+
+            <div class="settings-table mt-auto">
+              <div class="settings-table-row">
+                <div class="settings-table-col-1">Work Interval</div>
+                <div class="settings-table-col-2">60 min</div>
+                <div class="settings-table-col-3">5 min – 4 hours</div>
+              </div>
+              <div class="settings-table-row">
+                <div class="settings-table-col-1">Break Duration</div>
+                <div class="settings-table-col-2">5 min</div>
+                <div class="settings-table-col-3">1 min – 2 hours</div>
+              </div>
+              <div class="settings-table-row">
+                <div class="settings-table-col-1">Mode</div>
+                <div class="settings-table-col-2">Soft</div>
+                <div class="settings-table-col-3">Soft / Hard</div>
+              </div>
+              <div class="settings-table-row">
+                <div class="settings-table-col-1">Autostart</div>
+                <div class="settings-table-col-2">On</div>
+                <div class="settings-table-col-3">On / Off</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card reveal">
+            <div class="feature-icon-area">OVERLAY ENGINE</div>
+            <h3 class="headline-card mb-2">"GDI Blur Background"</h3>
+            <p class="text-secondary text-sm">
+              Win32 GDI BitBlt screen capture + a pure Rust Gaussian blur.
+              Instantaneous, zero-flicker. The background you see during a break
+              is your actual screen, not a screenshot-of-a-screenshot.
+            </p>
+          </div>
+
+          <div class="card reveal">
+            <div class="feature-icon-area">HARDWARE UI</div>
+            <h3 class="headline-card mb-2">"WebView2-Accelerated Overlay"</h3>
+            <p class="text-secondary text-sm">
+              The break bubble runs inside a WebView2 host — the Chromium engine
+              powering Edge. Smooth animations, true
+              <code>backdrop-filter</code>, hardware-accelerated rendering.
+            </p>
+          </div>
+
+          <div class="card reveal">
+            <div class="feature-icon-area">SESSION AWARE</div>
+            <h3 class="headline-card mb-2">"Intelligent Timer Pausing"</h3>
+            <p class="text-secondary text-sm">
+              WTS session events: screen lock → timer pauses. Wake from sleep →
+              timer resumes. PBT power events for suspend/resume. It never
+              counts idle time as work time.
+            </p>
+          </div>
+
+          <div class="card reveal">
+            <div class="feature-icon-area">MEDIA CONTROL</div>
+            <h3 class="headline-card mb-2">"SMTC Integration"</h3>
+            <p class="text-secondary text-sm">
+              Windows System Media Transport Controls. Break starts → active
+              media pauses. Break ends → media resumes. Your Spotify keeps
+              playing context, not state.
+            </p>
+          </div>
+
+          <div class="card reveal md:col-span-2 lg:col-span-3">
+            <div class="feature-icon-area">LIGHTWEIGHT</div>
+            <h3 class="headline-card mb-2">"&lt; 1.5 MB Binary"</h3>
+            <p class="text-secondary text-sm">
+              <code>opt-level = 'z'</code>, fat LTO, single codegen unit, UPX
+              LZMA compression. The installer is smaller than most browser
+              extension icons.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. BREAK MODES -->
+    <section id="modes">
+      <div class="container">
+        <h2 class="headline-section serif text-center mb-12 reveal">
+          <em>"How hard should it push?"</em>
+        </h2>
+
+        <div class="grid md:grid-cols-3 gap-8 relative reveal">
+          <div class="card flex flex-col">
+            <div class="ui-label mb-4" style="color: #86efac">SOFT MODE</div>
+            <h3 class="headline-card serif mb-4" style="font-size: 1.5rem">
+              "Gentle nudge"
+            </h3>
+            <p class="text-secondary mb-8">
+              The overlay appears with a countdown and a Skip button. You're an
+              adult — PauseCat reminds, never locks you out.
+            </p>
+            <p class="text-muted text-sm mt-auto">
+              <em>Default mode. Good for most users.</em>
+            </p>
+          </div>
+
+          <div class="card card-hard-mode flex flex-col">
+            <div class="ui-label mb-4" style="color: var(--pink)">
+              HARD MODE
+            </div>
+            <h3 class="headline-card serif mb-4" style="font-size: 1.5rem">
+              "Full enforcement"
+            </h3>
+            <p class="text-secondary mb-8">
+              No Skip button. No dismiss. The countdown runs to zero. You set
+              the interval — PauseCat holds you to it.
+            </p>
+            <p class="text-muted text-sm mt-auto">
+              <em>For users who know they'll skip soft breaks every time.</em>
+            </p>
+          </div>
+
+          <div class="card bg-void flex flex-col" style="border-color: var(--border);">
+            <div class="ui-label mb-4" style="color: var(--text-muted)">SETTINGS.JSON</div>
+            <pre class="mono" style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6;">
+{
+  <span style="color: var(--pink)">"behavior"</span>: {
+    <span style="color: var(--text-primary)">"mode"</span>: <span style="color: #86efac">"Hard"</span>,
+    <span style="color: var(--text-primary)">"interval"</span>: <span style="color: #FCD34D">3600</span>,
+    <span style="color: var(--text-primary)">"break"</span>: <span style="color: #FCD34D">300</span>
+  },
+  <span style="color: var(--pink)">"overlay"</span>: {
+    <span style="color: var(--text-primary)">"blur_radius"</span>: <span style="color: #FCD34D">45</span>,
+    <span style="color: var(--text-primary)">"theme"</span>: <span style="color: #86efac">"Dark"</span>
+  }
+}</pre>
+            <p class="text-muted text-sm mt-auto pt-6">
+              <em>Easily configured via the tray UI.</em>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. OPEN SOURCE -->
+    <section id="opensource" class="bg-layer">
+      <div class="container">
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+          <div class="reveal">
+            <span class="badge-license mb-6 inline-block">APACHE 2.0</span>
+            <h2 class="headline-section mb-6">
+              "Fully open. Read every line."
+            </h2>
+            <p class="text-secondary mb-8">
+              Clean Rust architecture: state machine, GDI capture, Gaussian
+              blur, WebView2 host, WinHTTP update engine — all on GitHub. Fork
+              it, audit it, improve it.
+            </p>
+
+            <div class="oss-stats mb-8">
+              <div class="oss-stat">
+                <div class="oss-stat-value" data-stat="stars">—</div>
+                <div class="oss-stat-label">GitHub Stars</div>
+              </div>
+              <div class="oss-stat">
+                <div class="oss-stat-value" data-stat="downloads">—</div>
+                <div class="oss-stat-label">Total Downloads</div>
+              </div>
+              <div class="oss-stat">
+                <div class="oss-stat-value" data-stat="version">—</div>
+                <div class="oss-stat-label">Latest Version</div>
+              </div>
+            </div>
+
+            <a
+              href="https://github.com/0xarchit/pauseCat"
+              class="btn-ghost"
+              style="color: var(--pink)"
+              target="_blank"
+              rel="noopener"
+            >
+              View Source on GitHub <span class="arrow">→</span>
+            </a>
+          </div>
+
+          <div class="terminal-card reveal">
+            <div class="terminal-header">
+              <div class="terminal-dots">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+              </div>
+              <div class="terminal-title">pausecat — PowerShell</div>
+            </div>
+            <div class="terminal-body">
+              <!-- Populated by typewriter.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. INSTALLATION -->
+    <section id="install">
+      <div class="container max-w-[800px] mx-auto reveal">
+        <h2 class="headline-section text-center mb-12">
+          "One file. One click. Running."
+        </h2>
+
+        <div class="install-timeline">
+          <div class="install-step">
+            <div class="install-marker">
+              <div class="install-circle">1</div>
+              <div class="install-line"></div>
+            </div>
+            <div>
+              <h3 class="headline-card mb-2">
+                Download from GitHub Releases
+              </h3>
+              <p class="text-secondary text-sm">
+                <code>[PauseCat_Installer.msi]</code>
+              </p>
+            </div>
+          </div>
+
+          <div class="install-step">
+            <div class="install-marker">
+              <div class="install-circle">2</div>
+              <div class="install-line"></div>
+            </div>
+            <div>
+              <h3 class="headline-card mb-2">Run PauseCat_Installer.msi</h3>
+              <p class="text-secondary text-sm">
+                WiX handles: WebView2 runtime check, autostart registry entry,
+                file installation.
+              </p>
+            </div>
+          </div>
+
+          <div class="install-step">
+            <div class="install-marker">
+              <div class="install-circle">3</div>
+            </div>
+            <div>
+              <h3 class="headline-card mb-2">
+                Find the cat in your system tray
+              </h3>
+              <p class="text-secondary text-sm">
+                Right-click → Settings to configure your intervals, mode, and
+                overlay style.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="req-card mt-12 mx-auto max-w-[400px]">
+          Windows 10 or 11 (64-bit)<br />
+          WebView2 Runtime (auto-installed by WiX)<br />
+          ~1.5 MB disk space
+        </div>
+
+        <div class="text-center mt-12">
+          <a
+            href="https://github.com/0xarchit/pauseCat/releases/latest"
+            data-action="download"
+            class="btn-primary btn-large"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="
+                display: inline-block;
+                vertical-align: -0.15em;
+                margin-right: 6px;
+              "
+            >
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            Download for Windows — Free
+          </a>
+          <p class="text-muted text-sm mt-4">
+            <span data-stat="version">—</span> · Apache 2.0
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. CONTRIBUTING -->
+    <section id="contribute" class="bg-layer">
+      <div class="container">
+        <h2 class="headline-section serif text-center italic mb-12 reveal">
+          "Built by one. Improved by many."
+        </h2>
+
+        <div class="grid md:grid-cols-3 gap-6 mb-12 reveal">
+          <a
+            href="https://github.com/0xarchit/pauseCat/issues/new?template=bug_report.yml"
+            class="card"
+            style="text-decoration: none; display: flex; flex-direction: column"
+            target="_blank"
+            rel="noopener"
+          >
+            <h3 class="headline-card mb-2" style="color: var(--text-primary)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="
+                  display: inline-block;
+                  vertical-align: -0.15em;
+                  margin-right: 4px;
+                "
+              >
+                <path d="m8 2 1.88 1.88" />
+                <path d="M14.12 3.88 16 2" />
+                <path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1" />
+                <path
+                  d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"
+                />
+                <path d="M12 20v-9" />
+                <path d="M6.53 9C4.6 8.8 3 7.1 3 5" />
+                <path d="M6 13H2" />
+                <path d="M3 21c0-2.1 1.7-3.9 3.8-4" />
+                <path d="M20.97 5c-2 .2-3.53 1.9-3.53 3.8" />
+                <path d="M22 13h-4" />
+                <path d="M17.2 17c2.1.1 3.8 1.9 3.8 4" />
+              </svg>
+              Report a Bug
+            </h3>
+            <p class="text-secondary text-sm mb-6">
+              Open an issue with the Bug Report template. Include your Windows
+              version and steps to reproduce.
+            </p>
+            <div class="btn-ghost mt-auto" style="font-size: 0.8rem">
+              View Issues <span class="arrow">→</span>
+            </div>
+          </a>
+          <a
+            href="https://github.com/0xarchit/pauseCat/issues/new?template=feature_request.yml"
+            class="card"
+            style="text-decoration: none; display: flex; flex-direction: column"
+            target="_blank"
+            rel="noopener"
+          >
+            <h3 class="headline-card mb-2" style="color: var(--text-primary)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="
+                  display: inline-block;
+                  vertical-align: -0.15em;
+                  margin-right: 4px;
+                "
+              >
+                <path
+                  d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"
+                />
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+              </svg>
+              Suggest a Feature
+            </h3>
+            <p class="text-secondary text-sm mb-6">
+              Use the Feature Request template. Explain the use case, not just
+              the solution.
+            </p>
+            <div class="btn-ghost mt-auto" style="font-size: 0.8rem">
+              Open Feature Request <span class="arrow">→</span>
+            </div>
+          </a>
+          <a
+            href="https://github.com/0xarchit/pauseCat/blob/main/.github/CONTRIBUTING.md"
+            class="card"
+            style="text-decoration: none; display: flex; flex-direction: column"
+            target="_blank"
+            rel="noopener"
+          >
+            <h3 class="headline-card mb-2" style="color: var(--text-primary)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="
+                  display: inline-block;
+                  vertical-align: -0.15em;
+                  margin-right: 4px;
+                "
+              >
+                <path
+                  d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+                />
+              </svg>
+              Submit a PR
+            </h3>
+            <p class="text-secondary text-sm mb-6">
+              Branch: <code>feature/&lt;desc&gt;</code> or
+              <code>fix/&lt;desc&gt;</code>. Conventional commits. Main is
+              read-only.
+            </p>
+            <div class="btn-ghost mt-auto" style="font-size: 0.8rem">
+              Read CONTRIBUTING.md <span class="arrow">→</span>
+            </div>
+          </a>
+        </div>
+
+        <div
+          class="card bg-void max-w-[700px] mx-auto reveal"
+          style="padding: 16px"
+        >
+          <pre
+            class="mono"
+            style="
+              color: var(--text-secondary);
+              font-size: 0.85rem;
+              overflow-x: auto;
+            "
+          >
+<span style="color: var(--text-muted)"># Prerequisites: Rust stable · WiX Toolset v4 · WebView2 Runtime</span>
+
+<span style="color: var(--pink)">git</span> clone https://github.com/0xarchit/pauseCat
+<span style="color: var(--pink)">cd</span> pauseCat
+<span style="color: var(--pink)">cargo</span> run       <span style="color: var(--text-muted)"># development</span>
+<span style="color: var(--pink)">cargo</span> test      <span style="color: var(--text-muted)"># test suite</span>
+</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. FINAL CTA -->
+    <section id="download" class="text-center">
+      <div class="container reveal">
+        <img
+          src="assets/logo.svg"
+          alt="Logo"
+          style="width: 100px; margin: 0 auto 2rem"
+        />
+        <h2 class="headline-section serif italic mb-6">
+          "Your next break is overdue."
+        </h2>
+        <p class="text-secondary text-lg max-w-[460px] mx-auto mb-10">
+          Free. Open source. Already running on Windows machines that need it.
+        </p>
+
+        <a
+          href="https://github.com/0xarchit/pauseCat/releases/latest"
+          data-action="download"
+          class="btn-primary btn-large mb-6"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="
+              display: inline-block;
+              vertical-align: -0.15em;
+              margin-right: 6px;
+            "
+          >
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          Download for Windows
+        </a>
+
+        <p class="text-muted text-sm">
+          <span data-stat="version">—</span> · Apache 2.0 · Windows 10/11 ·
+          &lt; 1.5 MB
+        </p>
+      </div>
+    </section>
+
+    <!-- 12. FOOTER -->
+    <footer>
+      <div class="footer-grid reveal">
+        <div>
+          <a href="#" class="footer-logo">
+            <img src="assets/logo.svg" alt="Logo" style="height: 28px" />
+            PauseCat
+          </a>
+          <p class="text-muted text-sm mb-4">
+            Windows break reminders built in Rust.
+          </p>
+          <a
+            href="https://github.com/0xarchit/pauseCat"
+            class="btn-ghost"
+            style="font-size: 0.8rem"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+        </div>
+
+        <div>
+          <div class="footer-header">LINKS</div>
+          <div class="footer-links">
+            <a href="https://github.com/0xarchit/pauseCat/releases">Releases</a>
+            <a href="https://github.com/0xarchit/pauseCat/issues">Issues</a>
+            <a
+              href="https://github.com/0xarchit/pauseCat/blob/main/.github/CONTRIBUTING.md"
+              >Contributing</a
+            >
+            <a
+              href="https://github.com/0xarchit/pauseCat/blob/main/.github/CODE_OF_CONDUCT.md"
+              >Code of Conduct</a
+            >
+          </div>
+        </div>
+
+        <div>
+          <div class="footer-header">BUILT WITH</div>
+          <div class="footer-links">
+            <span>Rust 1.94+</span>
+            <span>WebView2</span>
+            <span>WiX Toolset</span>
+            <span>GitHub Actions</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom reveal">
+        Built with
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          style="display: inline-block; vertical-align: -0.15em"
+        >
+          <path
+            d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"
+          />
+        </svg>
+        and Rust by
+        <a
+          href="https://0xarchit.is-a.dev"
+          target="_blank"
+          rel="noopener"
+          style="color: var(--text-primary); text-decoration: none"
+          >@0xarchit</a
+        >
+        · Apache 2.0
+      </div>
+    </footer>
+  </body>
+</html>

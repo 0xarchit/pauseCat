@@ -1,0 +1,59 @@
+:root {
+  /* ─── THE ONE ACCENT ───────────────────────────── */
+  --pink:         #F472B6;   /* cat's nose — PRIMARY accent, used sparingly */
+  --pink-light:   #FBCFE8;   /* inner ear blush — for tints, hover overlays */
+  --pink-deep:    #BE185D;   /* deeper rose — pressed states, depth */
+  --pink-glow:    rgba(244, 114, 182, 0.2);
+  --pink-border:  rgba(244, 114, 182, 0.3);
+
+  /* ─── WARM DARK BASE ───────────────────────────── */
+  /* Note: use warm near-black — NOT cold blue-black.
+     Add a tiny hint of red-brown to every bg tone.   */
+  --bg-void:      #08070A;   /* deepest — almost pure black */
+  --bg-base:      #0D0B0E;   /* page background */
+  --bg-layer:     #141118;   /* section alt bg */
+  --bg-surface:   #1B1820;   /* cards, inputs */
+  --bg-raised:    #221F2A;   /* hover, elevated */
+
+  /* ─── BORDERS ──────────────────────────────────── */
+  --border:       rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(244, 114, 182, 0.35);
+  --border-pink:  rgba(244, 114, 182, 0.2);
+
+  /* ─── TEXT ─────────────────────────────────────── */
+  --text-primary:   #F0EAF5;   /* warm ivory-white, not cold white */
+  --text-secondary: #8E8098;   /* muted warm grey-violet */
+  --text-muted:     #4D4557;   /* near-invisible placeholder text */
+
+  /* ─── STRUCTURAL WHITES (from logo body) ────────  */
+  --cat-white:    #FFFFFF;
+  --ink:          #1E293B;   /* cat outline — only used for decorative logo elements */
+
+  /* ─── TYPOGRAPHY ───────────────────────────────── */
+  --text-xs:    clamp(0.7rem,  1vw,  0.8rem);
+  --text-sm:    clamp(0.8rem,  1.2vw, 0.9rem);
+  --text-base:  clamp(0.9rem,  1.5vw, 1.05rem);
+  --text-lg:    clamp(1.1rem,  2vw,  1.35rem);
+  --text-xl:    clamp(1.5rem,  3vw,  2.2rem);
+  --text-2xl:   clamp(2.2rem,  5vw,  3.8rem);
+  --text-hero:  clamp(3rem,    9vw,  7.5rem);
+
+  /* ─── SPACING & SHAPE ──────────────────────────── */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-xl:   36px;
+  --radius-pill: 9999px;
+
+  --max-w:       1140px;
+  --section-pad: clamp(5rem, 9vw, 9rem) 1.5rem;
+
+  /* ─── GLOW & SHADOW ────────────────────────────── */
+  --glow-xs:   0 0 12px var(--pink-glow);
+  --glow-sm:   0 0 24px var(--pink-glow);
+  --glow-md:   0 0 48px var(--pink-glow), 0 0 96px rgba(244,114,182,0.08);
+  --glow-hero: 0 0 80px rgba(244,114,182,0.18), 0 0 160px rgba(244,114,182,0.06);
+
+  --shadow-card:  0 2px 24px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.5);
+  --shadow-deep:  0 20px 60px rgba(0,0,0,0.7);
+}
