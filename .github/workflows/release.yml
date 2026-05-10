@@ -15,6 +15,21 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0 # Important: fetch all history for changelog generation
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python Dependencies
+        run: pip install requests
+
+      - name: Generate AI Release Notes
+        env:
+          GH_MODELS_API_KEY: ${{ secrets.GH_MODELS_API_KEY }}
+        run: python scripts/generate_release_notes.py
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
@@ -48,6 +63,7 @@ jobs:
       - name: Upload Release Artifacts
         uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
         with:
+          body_path: release_notes.md
           files: |
             target/release/PauseCat_Installer.msi
             assets/default.webm
