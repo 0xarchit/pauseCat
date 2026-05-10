@@ -95,7 +95,6 @@ impl App {
 
         unsafe {
             let mut msg = MSG::default();
-            // Pulse every 1s as a secondary safety, though WM_APP_EVENT is primary
             let _ = SetTimer(None, 1, 1000, None); 
             
             while GetMessageW(&mut msg, None, 0, 0).as_bool() {
@@ -270,23 +269,55 @@ impl App {
     }
 
     fn pause_media(&mut self) {
-        if crate::system::is_media_playing() {
-            unsafe {
-                let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(47 << 16)));
+        use windows::Media::Control::{GlobalSystemMediaTransportControlsSessionManager, GlobalSystemMediaTransportControlsSessionPlaybackStatus};
+        
+        self.was_media_playing = false;
+        let _ = (|| -> windows::core::Result<()> {
+            let op = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?;
+            for _ in 0..20 {
+                if let Ok(manager) = op.GetResults() {
+                    if let Ok(session) = manager.GetCurrentSession() {
+                        let info = session.GetPlaybackInfo()?;
+                        if info.PlaybackStatus()? == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing {
+                            let _ = session.TryPauseAsync()?;
+                            self.was_media_playing = true;
+                            log::info!("Media Synchronization: Surgical pause executed.");
+                        }
+                    }
+                    return Ok(());
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
             }
-            self.was_media_playing = true; 
-        } else {
-            self.was_media_playing = false;
+            Ok(())
+        })();
+
+        if !self.was_media_playing {
+            log::info!("Media Synchronization: No active playing session detected.");
         }
     }
 
     fn resume_media(&mut self) {
-        if self.was_media_playing {
-            unsafe {
-                let _ = SendMessageW(HWND_BROADCAST, WM_APPCOMMAND, Some(WPARAM(0)), Some(LPARAM(46 << 16)));
+        if !self.was_media_playing { return; }
+
+        use windows::Media::Control::GlobalSystemMediaTransportControlsSessionManager;
+        
+        let _ = (|| -> windows::core::Result<()> {
+            let op = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?;
+            for _ in 0..20 {
+                if let Ok(manager) = op.GetResults() {
+                    if let Ok(session) = manager.GetCurrentSession() {
+                        let _ = session.TryPlayAsync()?;
+                        log::info!("Media Synchronization: Surgical resume executed.");
+                        return Ok(());
+                    }
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
             }
-            self.was_media_playing = false;
-        }
+            Ok(())
+        })();
+
+        self.was_media_playing = false;
     }
 
     pub fn drain_events(&mut self) {

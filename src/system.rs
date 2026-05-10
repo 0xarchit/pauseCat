@@ -107,7 +107,8 @@ pub fn is_media_playing() -> bool {
     let result = (|| -> windows::core::Result<bool> {
         let op = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?;
         
-        for _ in 0..100 {
+        // Polling wait for the async operation (max 100ms)
+        for _ in 0..10 {
             if let Ok(manager) = op.GetResults() {
                 if let Ok(session) = manager.GetCurrentSession() {
                     let info = session.GetPlaybackInfo()?;
@@ -116,10 +117,19 @@ pub fn is_media_playing() -> bool {
                 }
                 return Ok(false);
             }
-            std::thread::sleep(std::time::Duration::from_millis(1));
+            std::thread::sleep(std::time::Duration::from_millis(10));
         }
         Ok(false)
     })();
 
-    result.unwrap_or(false)
+    match result {
+        Ok(playing) => {
+            if playing { log::info!("Media detection: Currently Playing"); }
+            playing
+        }
+        Err(e) => {
+            log::warn!("Media detection failed: {:?}", e);
+            false
+        }
+    }
 }

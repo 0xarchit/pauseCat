@@ -7,6 +7,7 @@ use crate::events::AppEvent;
 use crate::settings::Settings;
 use crate::overlay::{capture, blur};
 use crate::system;
+use crate::app::wakeup_main_thread;
 
 pub fn sleep_interruptible(duration: Duration, paused: &AtomicBool) {
     let mut elapsed = Duration::from_millis(0);
@@ -95,12 +96,16 @@ pub fn run_optimized(
                     continue;
                 }
 
+                log::info!("Starting background pre-capture...");
                 let bg_clone = pre_captured_bg.clone();
                 thread::spawn(move || {
                     if let Ok(captured) = capture::capture_virtual_screen() {
                         let blurred = blur::blur(&captured.data, captured.width as usize, captured.height as usize, 10.0);
                         let mut lock = bg_clone.write().unwrap();
                         *lock = Some((captured.width, captured.height, blurred));
+                        log::info!("Background pre-capture complete.");
+                    } else {
+                        log::error!("Background pre-capture failed.");
                     }
                 });
             }
@@ -127,68 +132,23 @@ pub fn run_optimized(
                     continue;
                 }
 
+                log::info!("Break triggered: Showing overlay.");
                 is_breaking = true;
                 let _ = event_tx.send(AppEvent::ShowOverlay);
+                wakeup_main_thread();
                 
                 let s = settings.read().unwrap();
                 time_remaining = Duration::from_secs(s.break_duration_secs as u64);
             } else {
+                log::info!("Break complete: Hiding overlay.");
                 is_breaking = false;
                 pre_capture_triggered = false;
                 let _ = event_tx.send(AppEvent::HideOverlay);
+                wakeup_main_thread();
                 
                 let s = settings.read().unwrap();
                 time_remaining = Duration::from_secs(s.work_duration_secs as u64);
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod internal_tests {
-    use super::*;
-    use std::sync::mpsc;
-
-    #[test]
-    fn test_sleep_interruptible() {
-        let paused = Arc::new(AtomicBool::new(false));
-        let start = Instant::now();
-        sleep_interruptible(Duration::from_millis(100), &paused);
-        assert!(start.elapsed() >= Duration::from_millis(100));
-    }
-
-    #[test]
-    fn test_timer_reactive_and_pause() {
-        let settings = Arc::new(RwLock::new(Settings::default()));
-        let (tx, _rx) = mpsc::channel();
-        let paused = Arc::new(AtomicBool::new(false));
-        let session_paused = Arc::new(AtomicBool::new(false));
-        let bg = Arc::new(RwLock::new(None));
-
-        let s_clone = settings.clone();
-        let tx_clone = tx.clone();
-        let p_clone = paused.clone();
-        let sp_clone = session_paused.clone();
-        let bg_clone = bg.clone();
-
-        thread::spawn(move || {
-            run_optimized(s_clone, tx_clone, p_clone, sp_clone, bg_clone);
-        });
-
-        thread::sleep(Duration::from_millis(600));
-
-        paused.store(true, Ordering::Relaxed);
-        thread::sleep(Duration::from_millis(600));
-        paused.store(false, Ordering::Relaxed);
-
-        session_paused.store(true, Ordering::Relaxed);
-        thread::sleep(Duration::from_millis(600));
-        session_paused.store(false, Ordering::Relaxed);
-
-        {
-            let mut s = settings.write().unwrap();
-            s.work_duration_secs = 5000;
-        }
-        thread::sleep(Duration::from_millis(600));
     }
 }

@@ -158,7 +158,8 @@ impl Settings {
     }
 
     pub fn validate(&mut self) {
-        if self.work_duration_secs < 300 { self.work_duration_secs = 300; }
+        // Lowered minimums to support user preferences (1 min work, 10s break)
+        if self.work_duration_secs < 60 { self.work_duration_secs = 60; }
         if self.work_duration_secs > 14400 { self.work_duration_secs = 14400; }
         if self.break_duration_secs < 10 { self.break_duration_secs = 10; }
         if self.break_duration_secs > 7200 { self.break_duration_secs = 7200; }
