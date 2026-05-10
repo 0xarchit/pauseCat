@@ -73,8 +73,8 @@ nav.scrolled {
   border-radius: var(--radius-pill);
   font-family: 'Syne', sans-serif;
   font-weight: 700;
-  font-size: 1rem;
-  padding: 15px 40px;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+  padding: clamp(12px, 3vw, 15px) clamp(24px, 5vw, 40px);
   text-decoration: none;
   transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
 }

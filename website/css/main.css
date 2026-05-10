@@ -188,8 +188,8 @@
   position: absolute;
   top: 8%;
   left: 6%;
-  width: 200px;
-  height: 200px;
+  width: clamp(120px, 40vw, 200px);
+  height: clamp(120px, 40vw, 200px);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.09);
   backdrop-filter: blur(28px) saturate(160%);
@@ -206,7 +206,7 @@
 .bubble-time {
   font-family: 'Cormorant Garamond', serif;
   font-weight: 600;
-  font-size: 3rem;
+  font-size: clamp(1.8rem, 6vw, 3rem);
   color: var(--text-primary);
   line-height: 1;
 }
@@ -214,7 +214,7 @@
 .bubble-title {
   font-family: 'Syne', sans-serif;
   font-weight: 600;
-  font-size: 0.7rem;
+  font-size: clamp(0.5rem, 1.5vw, 0.7rem);
   text-transform: uppercase;
   letter-spacing: 0.15em;
   opacity: 0.75;
@@ -224,17 +224,17 @@
 .bubble-sub {
   font-family: 'Syne', sans-serif;
   font-weight: 400;
-  font-size: 0.6rem;
+  font-size: clamp(0.45rem, 1vw, 0.6rem);
   opacity: 0.45;
   margin-top: 2px;
 }
 
 .bubble-skip {
   position: absolute;
-  bottom: 24px;
+  bottom: clamp(12px, 4vw, 24px);
   font-family: 'Syne', sans-serif;
   font-weight: 600;
-  font-size: 0.65rem;
+  font-size: clamp(0.5rem, 1.5vw, 0.65rem);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 4px 12px;
@@ -574,8 +574,8 @@
 }
 
 .btn-large {
-  font-size: 1.1rem;
-  padding: 18px 48px;
+  font-size: clamp(0.95rem, 3vw, 1.1rem);
+  padding: clamp(14px, 3.5vw, 18px) clamp(28px, 6vw, 48px);
 }
 
 /* Footer */
