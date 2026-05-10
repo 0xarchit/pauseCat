@@ -652,55 +652,11 @@ footer {
 /* --- Interactive Cursor & Ambient Lighting --- */
 @media (pointer: fine) {
   body {
-    cursor: none;
+    cursor: url('../assets/Cat_Cursor.png'), auto;
   }
   
   a, button, [role="button"], input, select, textarea, .card, .chip {
-    cursor: none !important;
-  }
-
-  #custom-cursor,
-  #custom-cursor-glow {
-    position: fixed;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-    z-index: 9999;
-    border-radius: 50%;
-    transform: translate3d(-100px, -100px, 0); /* Start hidden */
-  }
-
-  #custom-cursor {
-    width: 6px;
-    height: 6px;
-    background: var(--pink);
-    margin: -3px 0 0 -3px; /* Center */
-    transition: width 0.2s, height 0.2s, margin 0.2s, background 0.2s;
-  }
-
-  #custom-cursor-glow {
-    width: 40px;
-    height: 40px;
-    border: 1px solid var(--border-pink);
-    background: rgba(244, 114, 182, 0.05);
-    margin: -20px 0 0 -20px; /* Center */
-    transition: width 0.3s, height 0.3s, margin 0.3s, background 0.3s, border-color 0.3s;
-  }
-
-  #custom-cursor.hovering {
-    width: 0;
-    height: 0;
-    margin: 0;
-    opacity: 0;
-  }
-
-  #custom-cursor-glow.hovering {
-    width: 60px;
-    height: 60px;
-    margin: -30px 0 0 -30px;
-    background: rgba(244, 114, 182, 0.1);
-    border-color: var(--pink);
-    backdrop-filter: blur(2px);
+    cursor: url('../assets/Cat_Pointer.png'), pointer !important;
   }
 
   #ambient-glow {
