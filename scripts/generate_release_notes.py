@@ -5,10 +5,11 @@ import requests
 import time
 import sys
 
-MODEL_URL = "https://models.github.ai/inference/chat/completions"
+MODEL_URL = "https://models.github.io/inference/chat/completions"
 MODEL_NAME = "gpt-4o-mini"
 MAX_CHARS_PER_CHUNK = 15000
 MAX_DIFF_CHARS = 1500
+INCLUDED_PATHS = ["src/*", "wix/*", "build.rs", "Cargo.toml"]
 
 def get_commit_data():
     try:
@@ -25,7 +26,13 @@ def get_commit_data():
         
         for h in hashes[:100]:
             msg = subprocess.check_output(["git", "show", "-s", "--format=%s", h]).decode(errors='ignore').strip()
-            diff = subprocess.check_output(["git", "show", "--patch", "--stat", "--format=", h]).decode(errors='ignore')
+            
+            show_cmd = ["git", "show", "--patch", "--stat", "--format=", h, "--"] + INCLUDED_PATHS
+            diff = subprocess.check_output(show_cmd).decode(errors='ignore')
+            
+            if not diff.strip():
+                continue
+                
             diff = diff[:MAX_DIFF_CHARS] + "\n...[truncated]" if len(diff) > MAX_DIFF_CHARS else diff
             commit_data.append(f"Commit: {h}\nMessage: {msg}\nChanges:\n{diff}")
             
@@ -58,7 +65,13 @@ def main():
     output_file = "release_notes.md"
     api_key = os.getenv("GH_MODELS_API_KEY")
     commit_data = get_commit_data()
-    raw_changelog = "## Commits\n" + "\n".join([c.split('\n')[1] for c in commit_data]) if commit_data else "Maintenance release."
+    
+    raw_lines = []
+    for c in commit_data:
+        lines = c.split('\n')
+        if len(lines) > 1:
+            raw_lines.append(lines[1])
+    raw_changelog = "## Commits\n" + "\n".join(raw_lines) if raw_lines else "Maintenance release."
 
     if not api_key:
         with open(output_file, "w", encoding="utf-8") as f:
