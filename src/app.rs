@@ -3,14 +3,25 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::thread;
 use windows::Win32::UI::WindowsAndMessaging::*;
-use windows::Win32::System::Com::*;
 use windows::Win32::Foundation::*;
+use windows::Win32::System::Threading::GetCurrentThreadId;
 use crate::settings::Settings;
 use crate::tray::TrayIcon;
 use crate::events::AppEvent;
 use crate::timer;
 use crate::overlay::{OverlayWindow, capture, blur, webview_env};
 use crate::settings_ui::SettingsWindow;
+
+pub const WM_APP_EVENT: u32 = WM_USER + 1;
+static mut MAIN_THREAD_ID: u32 = 0;
+
+pub fn wakeup_main_thread() {
+    unsafe {
+        if MAIN_THREAD_ID != 0 {
+            let _ = PostThreadMessageW(MAIN_THREAD_ID, WM_APP_EVENT, WPARAM(0), LPARAM(0));
+        }
+    }
+}
 
 pub struct App {
     pub settings: Arc<RwLock<Settings>>,
@@ -33,6 +44,8 @@ impl App {
         let paused = Arc::new(AtomicBool::new(false));
         let session_paused = Arc::new(AtomicBool::new(false));
         let is_dark_mode = crate::system::is_dark_mode();
+        
+        unsafe { MAIN_THREAD_ID = GetCurrentThreadId(); }
 
         Self {
             settings,
@@ -50,10 +63,6 @@ impl App {
     }
 
     pub fn init(&mut self) -> windows::core::Result<()> {
-        unsafe {
-            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-        }
-
         let _ = webview_env::init_global_env();
         let _ = self.settings.read().unwrap().update_autostart();
         crate::system::set_tray_menu_theme(self.is_dark_mode);
@@ -81,6 +90,25 @@ impl App {
         Ok(())
     }
 
+    pub fn run(&mut self) -> windows::core::Result<()> {
+        self.init()?;
+
+        unsafe {
+            let mut msg = MSG::default();
+            // Pulse every 1s as a secondary safety, though WM_APP_EVENT is primary
+            let _ = SetTimer(None, 1, 1000, None); 
+            
+            while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+                if msg.message == WM_APP_EVENT || (msg.message == WM_TIMER && msg.wParam.0 == 1) {
+                    self.drain_events();
+                }
+                let _ = TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+        }
+        Ok(())
+    }
+
     pub fn handle_event(&mut self, event: AppEvent) {
         match event {
             AppEvent::ShowOverlay => {
@@ -94,6 +122,8 @@ impl App {
                     self.resume_media();
                 }
                 self.reminder_overlay = None;
+                blur::flush_buffers();
+                capture::flush_buffer();
             }
             AppEvent::SettingsClosed => {
                 self.settings_window = None;
@@ -131,8 +161,14 @@ impl App {
                 let event_tx = self.event_tx.clone();
                 thread::spawn(move || {
                     match crate::updater::check_for_updates() {
-                        Ok(info) => { let _ = event_tx.send(AppEvent::UpdateStatus(info)); }
-                        Err(e) => { let _ = event_tx.send(AppEvent::UpdateError(e.to_string())); }
+                        Ok(info) => { 
+                            let _ = event_tx.send(AppEvent::UpdateStatus(info));
+                            wakeup_main_thread();
+                        }
+                        Err(e) => { 
+                            let _ = event_tx.send(AppEvent::UpdateError(e.to_string()));
+                            wakeup_main_thread();
+                        }
                     }
                 });
             }
@@ -146,6 +182,7 @@ impl App {
                 thread::spawn(move || {
                     if let Err(e) = crate::updater::download_and_install(event_tx.clone()) {
                         let _ = event_tx.send(AppEvent::UpdateError(e.to_string()));
+                        wakeup_main_thread();
                     }
                 });
             }
@@ -206,7 +243,7 @@ impl App {
     }
 
     fn show_overlay_optimized(&mut self) {
-        let (width, height, data) = if let Some(bg) = self.pre_captured_bg.read().unwrap().clone() {
+        let (blurred_width, blurred_height, data) = if let Some(bg) = self.pre_captured_bg.read().unwrap().clone() {
             bg
         } else {
             if let Ok(captured) = capture::capture_virtual_screen() {
@@ -215,12 +252,17 @@ impl App {
             } else { return; }
         };
 
-        let current_settings = self.settings.read().unwrap().clone();
-        if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), width, height, data, current_settings) {
-            overlay.update_theme(self.is_dark_mode);
-            crate::system::apply_immersive_dark_mode(overlay.hwnd, self.is_dark_mode);
-            overlay.fade_in();
-            self.reminder_overlay = Some(overlay);
+        unsafe {
+            let screen_width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+            let screen_height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+            let current_settings = self.settings.read().unwrap().clone();
+            
+            if let Ok(overlay) = OverlayWindow::new(self.event_tx.clone(), screen_width, screen_height, blurred_width, blurred_height, data, current_settings) {
+                overlay.update_theme(self.is_dark_mode);
+                crate::system::apply_immersive_dark_mode(overlay.hwnd, self.is_dark_mode);
+                overlay.fade_in();
+                self.reminder_overlay = Some(overlay);
+            }
         }
         
         let mut lock = self.pre_captured_bg.write().unwrap();
@@ -261,12 +303,8 @@ mod internal_tests {
     #[test]
     fn test_app_logic_methods() {
         let mut app = App::new();
-        
-        // Test media logic (smoke)
         app.pause_media();
         app.resume_media();
-        
-        // Test handle_event with variants that don't trigger real UI popups
         app.handle_event(AppEvent::TogglePause);
         app.handle_event(AppEvent::SettingsClosed);
         app.handle_event(AppEvent::SessionLocked);
@@ -283,16 +321,9 @@ mod internal_tests {
         app.handle_event(AppEvent::CheckForUpdates);
         app.handle_event(AppEvent::StartUpdate);
         app.handle_event(AppEvent::Quit);
-        
-        // Test media logic with mock-ish calls
         app.pause_media();
         app.resume_media();
-
-        // Test init (smoke)
-        // Now safe because windows are hidden in tests
         let _ = app.init();
-
-        // Test draining
         app.event_tx.send(AppEvent::UserDismissed).unwrap();
         app.drain_events();
     }
@@ -300,21 +331,15 @@ mod internal_tests {
     #[test]
     fn test_app_window_management_logic() {
         let mut app = App::new();
-        
-        // Test overlay closing logic
         use windows::Win32::Foundation::HWND;
         use crate::overlay::OverlayWindow;
         app.reminder_overlay = Some(OverlayWindow { hwnd: HWND(1 as *mut _) });
         app.handle_event(AppEvent::HideOverlay);
         assert!(app.reminder_overlay.is_none());
-
-        // Test settings window closing logic
         use crate::settings_ui::SettingsWindow;
         app.settings_window = Some(SettingsWindow { hwnd: HWND(1 as *mut _) });
         app.handle_event(AppEvent::SettingsClosed);
         assert!(app.settings_window.is_none());
-        
-        // Test session events with dummy windows
         app.settings_window = Some(SettingsWindow { hwnd: HWND(1 as *mut _) });
         app.handle_event(AppEvent::SessionLocked);
         app.handle_event(AppEvent::SessionUnlocked);

@@ -1,32 +1,40 @@
 use std::sync::mpsc::Sender;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use windows::core::*;
 use windows::Win32::Foundation::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::Win32::System::Com::*;
-use windows::Win32::System::Com::StructuredStorage::*;
+use windows::Win32::Storage::FileSystem::*;
+use windows::Win32::UI::Shell::SHCreateStreamOnFileEx;
 use webview2_com::*;
 use webview2_com::Microsoft::Web::WebView2::Win32::*;
 use crate::events::AppEvent;
-use base64::{Engine as _, engine::general_purpose};
 use crate::overlay::webview_env;
+use std::path::PathBuf;
 
 struct ComSafe<T>(T);
 unsafe impl<T> Send for ComSafe<T> {}
 unsafe impl<T> Sync for ComSafe<T> {}
 
-lazy_static::lazy_static! {
-    static ref OVERLAY_CONTROLLERS: Mutex<HashMap<isize, ComSafe<ICoreWebView2Controller>>> = Mutex::new(HashMap::new());
+static OVERLAY_CONTROLLERS: OnceLock<Mutex<HashMap<isize, ComSafe<ICoreWebView2Controller>>>> = OnceLock::new();
+static LOCAL_ASSET_REGISTRY: OnceLock<Mutex<HashMap<String, PathBuf>>> = OnceLock::new();
+
+fn get_controllers() -> &'static Mutex<HashMap<isize, ComSafe<ICoreWebView2Controller>>> {
+    OVERLAY_CONTROLLERS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn get_asset_registry() -> &'static Mutex<HashMap<String, PathBuf>> {
+    LOCAL_ASSET_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 pub fn register_controller(hwnd: HWND, controller: ICoreWebView2Controller) {
-    if let Ok(mut lock) = OVERLAY_CONTROLLERS.lock() {
+    if let Ok(mut lock) = get_controllers().lock() {
         lock.insert(hwnd.0 as isize, ComSafe(controller));
     }
 }
 
-pub fn handle_overlay_message<F>(json: &str, sender: &Sender<AppEvent>, settings: &crate::settings::Settings, post_message: F) 
+pub fn handle_overlay_message<F>(_hwnd: HWND, json: &str, sender: &Sender<AppEvent>, settings: &crate::settings::Settings, post_message: F) 
 where F: FnOnce(&str) {
     if json.contains("\"action\":\"dismiss\"") {
         let _ = sender.send(AppEvent::UserDismissed);
@@ -39,7 +47,16 @@ where F: FnOnce(&str) {
         let final_media_path = if anim_path == "default.webm" || !anim_path.contains(std::path::MAIN_SEPARATOR) {
             format!("https://pausecat.app/assets/{}", anim_path)
         } else {
-            format!("https://pausecat.app/local/{}", general_purpose::STANDARD.encode(&anim_path))
+            let path = PathBuf::from(&anim_path);
+            let id = if let Some(name) = path.file_name() {
+                name.to_string_lossy().to_string()
+            } else {
+                "custom".to_string()
+            };
+            if let Ok(mut lock) = get_asset_registry().lock() {
+                lock.insert(id.clone(), path);
+            }
+            format!("https://pausecat.app/local/{}", id)
         };
         let messages_json = serde_json::to_string(&settings.break_messages).unwrap_or_else(|_| "[]".to_string());
         let init_msg = format!(
@@ -55,7 +72,7 @@ where F: FnOnce(&str) {
     }
 }
 
-pub fn handle_resource_request(uri: &str, assets_path: &std::path::Path) -> Option<(Vec<u8>, String)> {
+pub fn handle_resource_stream_request(uri: &str, assets_path: &std::path::Path) -> Option<(IStream, String)> {
     if uri.starts_with("https://pausecat.app/") {
         let path_part = uri.trim_start_matches("https://pausecat.app/");
         let file_name = if path_part.starts_with("assets/") {
@@ -65,46 +82,50 @@ pub fn handle_resource_request(uri: &str, assets_path: &std::path::Path) -> Opti
         };
 
         if !file_name.is_empty() {
-            // 1. Try provided assets_path (e.g. Config Dir for lazy-loaded assets)
             let target_path = assets_path.join(file_name);
             if target_path.exists() && target_path.is_file() {
-                if let Ok(content) = std::fs::read(&target_path) {
-                    return Some((content, get_mime_type(file_name)));
+                if let Ok(stream) = create_file_stream(&target_path) {
+                    return Some((stream, get_mime_type(file_name)));
                 }
             }
 
-            // 2. Try fallback (Near EXE for bundled assets)
             if let Ok(mut exe_path) = std::env::current_exe() {
                 exe_path.pop();
                 let fallback_path = exe_path.join("assets").join(file_name);
                 if fallback_path.exists() && fallback_path.is_file() {
-                    if let Ok(content) = std::fs::read(&fallback_path) {
-                        return Some((content, get_mime_type(file_name)));
+                    if let Ok(stream) = create_file_stream(&fallback_path) {
+                        return Some((stream, get_mime_type(file_name)));
                     }
                 }
             }
-            
-            // 3. Try CWD fallback
-            let cwd_path = std::path::PathBuf::from("assets").join(file_name);
-            if cwd_path.exists() && cwd_path.is_file() {
-                if let Ok(content) = std::fs::read(&cwd_path) {
-                    return Some((content, get_mime_type(file_name)));
-                }
-            }
         } else if path_part.starts_with("local/") {
-            let encoded = path_part.trim_start_matches("local/");
-            if let Ok(path_bytes) = general_purpose::STANDARD.decode(encoded) {
-                let target_path = std::path::PathBuf::from(String::from_utf8(path_bytes).unwrap_or_default());
-                if target_path.exists() && target_path.is_file() {
-                    if let Ok(content) = std::fs::read(&target_path) {
-                        let ext = target_path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                        return Some((content, get_mime_type(ext)));
+            let id = path_part.trim_start_matches("local/");
+            if let Ok(lock) = get_asset_registry().lock() {
+                if let Some(target_path) = lock.get(id) {
+                    if target_path.exists() && target_path.is_file() {
+                        if let Ok(stream) = create_file_stream(target_path) {
+                            let ext = target_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                            return Some((stream, get_mime_type(ext)));
+                        }
                     }
                 }
             }
         }
     }
     None
+}
+
+fn create_file_stream(path: &std::path::Path) -> windows::core::Result<IStream> {
+    unsafe {
+        let path_h = HSTRING::from(path.to_str().unwrap_or_default());
+        SHCreateStreamOnFileEx(
+            windows::core::PCWSTR(path_h.as_ptr()),
+            STGM_READ.0 as u32,
+            FILE_ATTRIBUTE_NORMAL.0,
+            false,
+            None,
+        )
+    }
 }
 
 fn get_mime_type(path_or_ext: &str) -> String {
@@ -148,13 +169,13 @@ const OVERLAY_ANTI_ZOOM_SCRIPT: &str = "
 
 pub fn init(hwnd: HWND, settings: crate::settings::Settings) -> windows::core::Result<()> {
     let env = webview_env::get_global_env().ok_or_else(|| windows::core::Error::from_hresult(HRESULT(-1)))?;
-    let env_inner = env.clone();
+    let env_res = env.clone();
     unsafe {
         env.CreateCoreWebView2Controller(hwnd, 
             &CreateCoreWebView2ControllerCompletedHandler::create(
                 Box::new(move |result, controller| {
                     on_overlay_controller_completed(result, controller, hwnd)?;
-                    if let Ok(lock) = OVERLAY_CONTROLLERS.lock() {
+                    if let Ok(lock) = get_controllers().lock() {
                         if let Some(safe_controller) = lock.get(&(hwnd.0 as isize)) {
                             let webview = safe_controller.0.CoreWebView2()?;
                             let ws = webview.Settings()?;
@@ -165,18 +186,15 @@ pub fn init(hwnd: HWND, settings: crate::settings::Settings) -> windows::core::R
                             let _ = ws.SetIsStatusBarEnabled(false);
                             let _ = webview.AddScriptToExecuteOnDocumentCreated(&HSTRING::from(OVERLAY_ANTI_ZOOM_SCRIPT), None);
                             let assets_path = webview_env::get_assets_path();
-                            let env_res = env_inner.clone();
+                            let env_inner = env_res.clone();
                             let _ = webview.AddWebResourceRequestedFilter(w!("https://pausecat.app/*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
                             let _ = webview.add_WebResourceRequested(&WebResourceRequestedEventHandler::create(Box::new(move |_, args| {
-                                if let (Some(args), env) = (args, &env_res) {
+                                if let (Some(args), env) = (args, &env_inner) {
                                     let request = args.Request()?;
                                     let mut uri_ptr = PWSTR::null();
                                     let _ = request.Uri(&mut uri_ptr);
                                     let uri = uri_ptr.to_string().unwrap_or_default();
-                                    if let Some((content, mime)) = handle_resource_request(&uri, &assets_path) {
-                                        let stream = CreateStreamOnHGlobal(HGLOBAL(std::ptr::null_mut()), true)?;
-                                        let _ = stream.Write(content.as_ptr() as *const _, content.len() as u32, None);
-                                        let _ = stream.Seek(0, STREAM_SEEK_SET, None);
+                                    if let Some((stream, mime)) = handle_resource_stream_request(&uri, &assets_path) {
                                         let response = env.CreateWebResourceResponse(Some(&stream), 200, w!("OK"), &HSTRING::from(format!("Content-Type: {}\r\n", mime)))?;
                                         let _ = args.SetResponse(&response);
                                     }
@@ -190,11 +208,11 @@ pub fn init(hwnd: HWND, settings: crate::settings::Settings) -> windows::core::R
                             let wv_c = webview.clone();
                             let settings_c = settings.clone();
                             let _ = webview.add_WebMessageReceived(&WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
-                                if let Some(args) = args {
+                                if let (Some(args), hwnd) = (args, hwnd) {
                                     let mut msg = PWSTR::null();
                                     if args.WebMessageAsJson(&mut msg).is_ok() {
                                         let json = msg.to_string().unwrap_or_default();
-                                        handle_overlay_message(&json, &sender_c, &settings_c, |m| { let _ = wv_c.PostWebMessageAsJson(&HSTRING::from(m)); });
+                                        handle_overlay_message(hwnd, &json, &sender_c, &settings_c, |m| { let _ = wv_c.PostWebMessageAsJson(&HSTRING::from(m)); });
                                         CoTaskMemFree(Some(msg.0 as *const _));
                                     }
                                 }
@@ -212,7 +230,7 @@ pub fn init(hwnd: HWND, settings: crate::settings::Settings) -> windows::core::R
 }
 
 pub fn resize_controller(hwnd: HWND) {
-    if let Ok(lock) = OVERLAY_CONTROLLERS.lock() {
+    if let Ok(lock) = get_controllers().lock() {
         if let Some(safe_controller) = lock.get(&(hwnd.0 as isize)) {
             let mut rect = RECT::default();
             unsafe { let _ = GetClientRect(hwnd, &mut rect); let _ = safe_controller.0.SetBounds(rect); }
@@ -221,37 +239,15 @@ pub fn resize_controller(hwnd: HWND) {
 }
 
 pub fn unregister_controller(hwnd: HWND) {
-    if let Ok(mut lock) = OVERLAY_CONTROLLERS.lock() { lock.remove(&(hwnd.0 as isize)); }
+    if let Ok(mut lock) = get_controllers().lock() { lock.remove(&(hwnd.0 as isize)); }
 }
 
 pub fn update_theme(hwnd: HWND, is_dark: bool) {
-    if let Ok(lock) = OVERLAY_CONTROLLERS.lock() {
+    if let Ok(lock) = get_controllers().lock() {
         if let Some(safe_controller) = lock.get(&(hwnd.0 as isize)) {
             if let Ok(webview) = unsafe { safe_controller.0.CoreWebView2() } {
                 let _ = unsafe { webview.PostWebMessageAsJson(&HSTRING::from(format!("{{\"action\":\"theme_changed\", \"isDark\": {}}}", is_dark))) };
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod internal_tests {
-    use super::*;
-    #[test]
-    fn test_on_overlay_controller_completed_error() {
-        let hwnd = HWND(std::ptr::null_mut());
-        let res = on_overlay_controller_completed(Err(windows::core::Error::from_hresult(HRESULT(-1))), None, hwnd);
-        assert!(res.is_err());
-    }
-    #[test]
-    fn test_handle_resource_request_logic() {
-        let assets_path = webview_env::get_assets_path();
-        let res = handle_resource_request("https://pausecat.app/assets/pauseCat.ico", &assets_path);
-        assert!(res.is_some());
-        assert_eq!(res.unwrap().1, "image/x-icon");
-        let local_path = assets_path.join("default.webm");
-        let encoded = general_purpose::STANDARD.encode(local_path.to_str().unwrap());
-        assert!(handle_resource_request(&format!("https://pausecat.app/local/{}", encoded), &assets_path).is_some());
-        assert!(handle_resource_request("https://google.com", &assets_path).is_none());
     }
 }

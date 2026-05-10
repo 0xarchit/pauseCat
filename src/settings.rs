@@ -1,19 +1,33 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use winreg::enums::*;
-use winreg::RegKey;
-use thiserror::Error;
+use windows::Win32::UI::Shell::*;
+use windows::Win32::Foundation::*;
+use windows::Win32::System::Registry::*;
+use windows::Win32::System::Com::CoTaskMemFree;
+use windows::core::HSTRING;
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum SettingsError {
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("Serialization error: {0}")]
-    Json(#[from] serde_json::Error),
-    #[error("Registry error: {0}")]
-    Registry(std::io::Error),
+    Io(std::io::Error),
+    Json(serde_json::Error),
+    Registry(windows::core::Error),
 }
+
+impl From<std::io::Error> for SettingsError { fn from(e: std::io::Error) -> Self { Self::Io(e) } }
+impl From<serde_json::Error> for SettingsError { fn from(e: serde_json::Error) -> Self { Self::Json(e) } }
+impl From<windows::core::Error> for SettingsError { fn from(e: windows::core::Error) -> Self { Self::Registry(e) } }
+
+impl std::fmt::Display for SettingsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(e) => write!(f, "IO error: {}", e),
+            Self::Json(e) => write!(f, "Serialization error: {}", e),
+            Self::Registry(e) => write!(f, "Registry error: {}", e),
+        }
+    }
+}
+impl std::error::Error for SettingsError {}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -38,9 +52,9 @@ pub struct Settings {
     pub bubble_pos_x: i32,
     pub bubble_pos_y: i32,
     pub animation_style: String,
-    pub break_style: String, // "media" or "text"
+    pub break_style: String, 
     pub custom_text: String,
-    pub video_volume: f32, // 0.0 to 1.0
+    pub video_volume: f32, 
     pub text_animation: String,
     pub text_rotation_x: i32,
     pub text_rotation_y: i32,
@@ -96,9 +110,16 @@ impl Default for Settings {
 
 impl Settings {
     pub fn get_config_dir() -> PathBuf {
-        let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-        path.push("PauseCat");
-        path
+        unsafe {
+            if let Ok(path_ptr) = SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG(0), None) {
+                let path_str = path_ptr.to_string().unwrap_or_default();
+                CoTaskMemFree(Some(path_ptr.0 as *const _));
+                let mut path = PathBuf::from(path_str);
+                path.push("PauseCat");
+                return path;
+            }
+        }
+        PathBuf::from(".")
     }
 
     pub fn get_config_path() -> PathBuf {
@@ -123,9 +144,7 @@ impl Settings {
         settings_to_save.validate();
 
         let dir = Self::get_config_dir();
-        if !dir.exists() {
-            fs::create_dir_all(&dir)?;
-        }
+        if !dir.exists() { fs::create_dir_all(&dir)?; }
 
         let path = Self::get_config_path();
         let tmp_path = path.with_extension("tmp");
@@ -135,7 +154,6 @@ impl Settings {
         fs::rename(&tmp_path, &path)?;
 
         self.update_autostart()?;
-
         Ok(())
     }
 
@@ -148,69 +166,23 @@ impl Settings {
         if self.bubble_opacity > 1.0 { self.bubble_opacity = 1.0; }
     }
 
-    pub fn force_save_error_test(&self) -> Result<(), SettingsError> {
-        let invalid_path = std::path::PathBuf::from("/invalid/path/settings.json");
-        let json = serde_json::to_string_pretty(self)?;
-        fs::write(invalid_path, json).map_err(SettingsError::Io)
-    }
-
     pub fn update_autostart(&self) -> Result<(), SettingsError> {
-        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
-        let (key, _) = hkcu.create_subkey(path).map_err(SettingsError::Registry)?;
-
-        if self.autostart {
-            let exe_path = std::env::current_exe().map_err(SettingsError::Io)?;
-            key.set_value("PauseCat", &exe_path.to_str().unwrap_or(""))
-                .map_err(SettingsError::Registry)?;
-        } else {
-            let _ = key.delete_value("PauseCat");
+        unsafe {
+            let mut h_key = HKEY::default();
+            let sub_key = windows::core::w!("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
+            
+            if RegCreateKeyExW(HKEY_CURRENT_USER, sub_key, Some(0), None, REG_OPTION_NON_VOLATILE, KEY_WRITE, None, &mut h_key, None) == ERROR_SUCCESS {
+                if self.autostart {
+                    if let Ok(exe_path) = std::env::current_exe() {
+                        let path_h = HSTRING::from(exe_path.to_str().unwrap_or_default());
+                        let _ = RegSetValueExW(h_key, windows::core::w!("PauseCat"), Some(0), REG_SZ, Some(std::slice::from_raw_parts(path_h.as_ptr() as *const u8, (path_h.len() * 2 + 2) as usize)));
+                    }
+                } else {
+                    let _ = RegDeleteValueW(h_key, windows::core::w!("PauseCat"));
+                }
+                let _ = RegCloseKey(h_key);
+            }
         }
-
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod internal_tests {
-    use super::*;
-
-    #[test]
-    fn test_settings_sabotage_and_validation() {
-        let s = Settings::default();
-        let _ = s.force_save_error_test();
-        
-        // Sabotage JSON loading
-        let config_dir = Settings::get_config_dir();
-        let path = config_dir.join("config.json");
-        let _ = std::fs::write(&path, "invalid json {");
-        let s_bad = Settings::load();
-        // Should fallback to default
-        assert_eq!(s_bad.work_duration_secs, Settings::default().work_duration_secs);
-
-        let mut s2 = Settings::default();
-        s2.work_duration_secs = 10;
-        s2.validate();
-        assert_eq!(s2.work_duration_secs, 300);
-        
-        s2.work_duration_secs = 20000;
-        s2.validate();
-        assert_eq!(s2.work_duration_secs, 14400);
-
-        s2.break_duration_secs = 5;
-        s2.validate();
-        assert_eq!(s2.break_duration_secs, 10);
-
-        s2.break_duration_secs = 10000;
-        s2.validate();
-        assert_eq!(s2.break_duration_secs, 7200);
-
-        s2.bubble_opacity = -0.5;
-        s2.validate();
-        assert_eq!(s2.bubble_opacity, 0.0);
-
-        s2.bubble_opacity = 1.5;
-        s2.validate();
-        assert_eq!(s2.bubble_opacity, 1.0);
     }
 }

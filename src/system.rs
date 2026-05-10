@@ -1,5 +1,3 @@
-use winreg::enums::*;
-use winreg::RegKey;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Dwm::*;
 use windows::core::{PCSTR, BOOL};
@@ -7,16 +5,23 @@ use windows::Win32::System::LibraryLoader::{GetModuleHandleA, GetProcAddress};
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::Win32::System::Threading::*;
 use windows::Win32::System::ProcessStatus::*;
+use windows::Win32::System::Registry::*;
 use std::collections::HashSet;
 
 pub fn is_dark_mode() -> bool {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(key) = hkcu.open_subkey(r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") {
-        let value: u32 = key.get_value("AppsUseLightTheme").unwrap_or(1);
-        value == 0
-    } else {
-        false
+    unsafe {
+        let mut h_key = HKEY::default();
+        let sub_key = windows::core::w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize");
+        let mut value = 1u32;
+        let mut size = std::mem::size_of::<u32>() as u32;
+
+        if RegOpenKeyExW(HKEY_CURRENT_USER, sub_key, Some(0), KEY_READ, &mut h_key) == ERROR_SUCCESS {
+            let _ = RegQueryValueExW(h_key, windows::core::w!("AppsUseLightTheme"), None, None, Some(&mut value as *mut _ as *mut _), Some(&mut size));
+            let _ = RegCloseKey(h_key);
+            return value == 0;
+        }
     }
+    false
 }
 
 pub fn apply_immersive_dark_mode(hwnd: HWND, is_dark: bool) {
@@ -101,10 +106,6 @@ pub fn is_media_playing() -> bool {
     
     let result = (|| -> windows::core::Result<bool> {
         let op = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?;
-        
-        // In windows-rs 0.62, we can try to GetResults directly if it's sync-capable 
-        // or just wait for status to not be 'Started'.
-        // Since we don't have AsyncStatus easy access, we'll try a loop with GetResults
         
         for _ in 0..100 {
             if let Ok(manager) = op.GetResults() {
