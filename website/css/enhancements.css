@@ -1,0 +1,184 @@
+/* Time-of-Day Dark Theme */
+html.theme-dark {
+  --bg-base:       #0A1118;
+  --bg-layer:      #0D1821;
+  --bg-surface:    #111F2C;
+  --bg-raised:     #162838;
+  --bg-ink-wash:   #05080C;
+  --text-primary:  #F3FAFF;
+  --text-secondary:#BEE0F5;
+  --text-muted:    #3E6A89;
+  --border:        rgba(59, 158, 217, 0.15);
+  --border-mid:    rgba(59, 158, 217, 0.3);
+  --shadow-sm:     0 4px 12px rgba(0,0,0,0.5);
+  --shadow-md:     0 8px 24px rgba(0,0,0,0.6);
+  --sky-border:    rgba(59, 158, 217, 0.25);
+  --sky-border-md: rgba(59, 158, 217, 0.55);
+  --sky-faint:     #0c1f30;
+  --sky-pale:      #112940;
+}
+
+/* Scroll-Synced Text Highlighting */
+.scroll-sync-text {
+  color: var(--text-muted);
+  background: linear-gradient(to right, var(--text-primary) 50%, var(--text-muted) 50%);
+  background-size: 200% 100%;
+  background-position: calc(100% - clamp(0, (var(--p, 0) - var(--sync-start, 0)) / (var(--sync-end, 1) - var(--sync-start, 0)), 1) * 100%) 0;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  transition: background-position 0.1s linear;
+}
+
+/* Chapter Progress Dots */
+.progress-dots {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 1000;
+}
+.progress-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-mid);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.progress-dot.active {
+  background: var(--sky);
+  transform: scale(1.8);
+}
+
+/* Sticky CTA */
+.sticky-cta {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sticky-cta.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Settings Hotspots */
+.mock-settings {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  margin-top: 60px;
+  width: 100%;
+  max-width: 600px;
+  height: 180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.mock-settings-header {
+  height: 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.mock-settings-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-mid);
+}
+.hotspot {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--sky);
+  border-radius: 50%;
+  cursor: pointer;
+  animation: pulse 2s infinite;
+}
+.hotspot::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 150%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+html.theme-dark .hotspot::after {
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+}
+.hotspot:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(59, 158, 217, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(59, 158, 217, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 158, 217, 0); }
+}
+
+/* Cursor Particles */
+.cursor-particle {
+  position: fixed;
+  width: 4px;
+  height: 4px;
+  background: var(--sky);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  animation: particleFade 0.8s forwards ease-out;
+}
+@keyframes particleFade {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+/* Floating Testimonial Quotes */
+.floating-quote {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  padding: 16px 24px;
+  border-radius: var(--radius-lg);
+  font-style: italic;
+  font-family: 'Fraunces', serif;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  z-index: 0;
+  opacity: 0.6;
+  animation: floatQuote 20s infinite alternate ease-in-out;
+  pointer-events: none;
+}
+html.theme-dark .floating-quote {
+  background: rgba(0, 0, 0, 0.3);
+}
+@keyframes floatQuote {
+  0% { transform: translate(0, 0) rotate(-2deg); }
+  100% { transform: translate(20px, -30px) rotate(2deg); }
+}

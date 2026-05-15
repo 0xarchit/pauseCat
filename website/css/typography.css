@@ -1,45 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --text-xs:    clamp(0.7rem,  0.9vw,  0.78rem);
+  --text-sm:    clamp(0.8rem,  1.1vw,  0.88rem);
+  --text-base:  clamp(0.9rem,  1.4vw,  1rem);
+  --text-lg:    clamp(1.05rem, 1.8vw,  1.3rem);
+  --text-xl:    clamp(1.4rem,  2.8vw,  2rem);
+  --text-2xl:   clamp(2rem,    4.5vw,  3.5rem);
+  --text-hero:  clamp(3rem,    8vw,    7rem);
+}
 
 body {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: var(--text-base);
   font-weight: 400;
   line-height: 1.65;
   letter-spacing: 0.01em;
+  color: var(--text-secondary);
+  background: var(--bg-base);
+  cursor: var(--cursor);
 }
 
-h1, h2, h3, h4, h5, h6, .serif {
-  font-family: 'Cormorant Garamond', serif;
+a, button, [role="button"], .card, .btn-primary {
+  cursor: var(--cursor-pointer);
 }
 
-code, pre, .mono {
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Fraunces', serif;
+  font-variation-settings: 'opsz' 72;
+  font-weight: 300;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+h1 italic, h2 italic, h3 italic {
+  font-style: italic;
+}
+
+code, pre {
   font-family: 'JetBrains Mono', monospace;
-}
-
-/* Specific type treatments based on guidelines */
-.headline-hero {
-  font-size: var(--text-hero);
-  line-height: 0.92;
   font-weight: 400;
 }
 
-.headline-section {
-  font-size: var(--text-2xl);
-  font-weight: 400;
-}
-
-.headline-card {
-  font-size: 1.2rem;
+.label, .nav-link, .badge {
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
-}
-
-.ui-label {
-  font-family: 'Syne', sans-serif;
-  font-weight: 600;
+  font-size: var(--text-xs);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.stat-number {
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 600;
+  letter-spacing: 0.1em;
 }

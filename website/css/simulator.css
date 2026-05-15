@@ -1,0 +1,177 @@
+.sim-layout-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+.sim-preview-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.simulator-ui {
+  width: 320px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  color: white;
+  opacity: calc((var(--p, 0) - 0.3) / 0.2);
+  pointer-events: auto;
+}
+
+.sim-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: var(--cursor-pointer);
+}
+
+.sim-select option {
+  background: #0D2137; /* Match bg-ink-wash */
+  color: white;
+}
+
+@media (max-width: 1024px) {
+  .sim-layout-container {
+    flex-direction: column;
+    justify-content: center;
+    padding: 100px 20px;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .simulator-ui {
+    width: 100%;
+    max-width: 400px;
+    opacity: 1;
+    margin-top: 20px;
+  }
+}
+
+.sim-group {
+  margin-bottom: 20px;
+}
+
+.sim-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+}
+
+.sim-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sim-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sim-btn-group {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+
+.sim-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.sim-btn.active {
+  background: var(--sky);
+  color: white;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--sky);
+}
+
+.sim-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--sky-pale);
+}
+
+.video-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+  z-index: 2;
+}
+
+.sim-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 16px 0;
+}
+
+.sim-sub-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  width: 60px;
+}
+
+.sim-context-group {
+  transition: all 0.3s ease;
+}
+
+/* Bubble Content Scaling */
+.bubble-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  /* Use container queries or a simple scale factor in JS */
+}
+
+.break-bubble .timer-display {
+  font-size: 3.8rem; /* Will be scaled by JS */
+  line-height: 1;
+}
+
+.break-bubble .status-text {
+  font-size: 0.85rem;
+}
+
+.break-bubble .work-status {
+  font-size: 0.65rem;
+}
+
+.break-bubble .skip-btn {
+  font-size: 0.78rem;
+  padding: 8px 24px;
+}
