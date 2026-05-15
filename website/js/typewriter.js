@@ -1,91 +1,71 @@
 export function initTypewriter() {
-  const terminalBody = document.querySelector('.terminal-body');
-  if (!terminalBody) return;
+  const terminal = document.querySelector('.terminal-body');
+  if (!terminal) return;
 
-  const script = [
-    { type: 'prompt', text: 'git clone https://github.com/0xarchit/pauseCat' },
-    { type: 'output', text: 'Cloning into \'pauseCat\'...' },
-    { type: 'prompt', text: 'cd pauseCat' },
-    { type: 'output', text: 'Read the code. Audit the architecture.' },
-    { type: 'output', text: 'To run, download the MSI from Releases.' }
+  const lines = [
+    { text: 'PS C:\\> ', type: 'prompt' },
+    { text: 'git clone https://github.com/0xarchit/pauseCat', type: 'text' },
+    { text: '\nPS C:\\> ', type: 'prompt' },
+    { text: 'cd pauseCat', type: 'text' },
+    { text: '\nPS C:\\> ', type: 'prompt' },
+    { text: 'cargo build --release', type: 'text' },
+    { text: '\n\nCompiling pausecat v1.1.2', type: 'text' },
+    { text: '\nFinished release [optimized] in 18.4s', type: 'success' },
+    { text: '\n\nPS C:\\> ', type: 'prompt' },
+    { text: '.\\target\\release\\pausecat.exe', type: 'text' },
+    { text: '\n[PauseCat] Tray initialized. Timer started. ', type: 'text' },
+    { text: '█', type: 'cursor' }
   ];
 
-  let lineIndex = 0;
-  let charIndex = 0;
-  let currentLineEl = null;
-  let isTyping = false;
+  let lineIdx = 0;
+  let charIdx = 0;
+  terminal.innerHTML = '';
 
-  // Clear existing static content if any, except for setting up structure
-  terminalBody.innerHTML = '';
-  
-  const createLine = (type) => {
-    const div = document.createElement('div');
-    if (type === 'prompt') {
-      const ps = document.createElement('span');
-      ps.className = 'term-prompt';
-      ps.textContent = 'PS C:\\> ';
-      div.appendChild(ps);
-    }
-    return div;
-  };
+  function type() {
+    if (lineIdx >= lines.length) return;
 
-  const cursor = document.createElement('span');
-  cursor.className = 'term-cursor';
-
-  const typeNextChar = () => {
-    if (lineIndex >= script.length) {
-      terminalBody.appendChild(cursor);
-      return;
+    const line = lines[lineIdx];
+    if (line.type === 'cursor') {
+        const span = document.createElement('span');
+        span.className = 't-cursor';
+        terminal.appendChild(span);
+        return;
     }
 
-    const currentLine = script[lineIndex];
-
-    if (charIndex === 0) {
-      if (currentLineEl && currentLineEl.contains(cursor)) {
-        currentLineEl.removeChild(cursor);
-      }
-      currentLineEl = createLine(currentLine.type);
-      terminalBody.appendChild(currentLineEl);
-      if (currentLine.type !== 'output' && currentLine.type !== 'success') {
-          currentLineEl.appendChild(cursor);
-      }
-    }
-
-    if (currentLine.type === 'prompt') {
-      // Type out prompt character by character
-      if (charIndex < currentLine.text.length) {
-        const textNode = document.createTextNode(currentLine.text.charAt(charIndex));
-        currentLineEl.insertBefore(textNode, cursor);
-        charIndex++;
-        setTimeout(typeNextChar, 40);
-      } else {
-        // Line finished
-        charIndex = 0;
-        lineIndex++;
-        setTimeout(typeNextChar, 200);
-      }
-    } else {
-      // Instantly show output lines
+    if (charIdx === 0) {
       const span = document.createElement('span');
-      if (currentLine.type === 'success') {
-          span.className = 'term-success';
-      }
-      span.textContent = currentLine.text;
-      currentLineEl.appendChild(span);
-      
-      charIndex = 0;
-      lineIndex++;
-      setTimeout(typeNextChar, 300);
+      if (line.type === 'prompt') span.className = 't-prompt';
+      if (line.type === 'success') span.className = 't-success';
+      terminal.appendChild(span);
     }
-  };
+
+    const currentSpan = terminal.lastChild;
+    const char = line.text[charIdx];
+    
+    if (char === '\n') {
+        terminal.appendChild(document.createElement('br'));
+    } else {
+        currentSpan.textContent += char;
+    }
+
+    charIdx++;
+    if (charIdx >= line.text.length) {
+      charIdx = 0;
+      lineIdx++;
+      setTimeout(type, 200);
+    } else {
+      setTimeout(type, 35);
+    }
+  }
 
   const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting && !isTyping) {
-      isTyping = true;
-      setTimeout(typeNextChar, 500);
-      observer.disconnect();
-    }
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        type();
+        observer.unobserve(terminal);
+      }
+    });
   }, { threshold: 0.5 });
 
-  observer.observe(terminalBody);
+  observer.observe(terminal);
 }
